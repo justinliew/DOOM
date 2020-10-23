@@ -1595,11 +1595,13 @@ boolean M_Responder (event_t* ev)
 	    return true;
 				
 	  case KEY_F11:           // gamma toggle
+#ifndef HEADLESS
 	    usegamma++;
 	    if (usegamma > 4)
 		usegamma = 0;
 	    players[consoleplayer].message = gammamsg[usegamma];
 	    I_SetPalette (W_CacheLumpName ("PLAYPAL",PU_CACHE));
+#endif
 	    return true;
 				
 	}

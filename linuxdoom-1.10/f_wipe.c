@@ -241,7 +241,9 @@ wipe_StartScreen
   int	height )
 {
     wipe_scr_start = screens[2];
+#ifndef HEADLESS
     I_ReadScreen(wipe_scr_start);
+#endif
     return 0;
 }
 
@@ -253,7 +255,9 @@ wipe_EndScreen
   int	height )
 {
     wipe_scr_end = screens[3];
+#ifndef HEADLESS
     I_ReadScreen(wipe_scr_end);
+#endif
     V_DrawBlock(x, y, 0, width, height, wipe_scr_start); // restore start scr.
     return 0;
 }

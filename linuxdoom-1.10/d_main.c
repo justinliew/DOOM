@@ -31,14 +31,12 @@ static const char rcsid[] = "$Id: d_main.c,v 1.8 1997/02/03 22:45:09 b1 Exp $";
 #define	FGCOLOR		8
 
 
-#ifdef NORMALUNIX
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#endif
 
 
 #include "doomdef.h"
@@ -261,7 +259,9 @@ void D_Display (void)
     }
     
     // draw buffered stuff to screen
+#ifndef HEADLESS
     I_UpdateNoBlit ();
+#endif
     
     // draw the view directly
     if (gamestate == GS_LEVEL && !automapactive && gametic)
@@ -271,9 +271,10 @@ void D_Display (void)
 	HU_Drawer ();
     
     // clean up border stuff
+#ifndef HEADLESS
     if (gamestate != oldgamestate && gamestate != GS_LEVEL)
 	I_SetPalette (W_CacheLumpName ("PLAYPAL",PU_CACHE));
-
+#endif
     // see if the border needs to be initially drawn
     if (gamestate == GS_LEVEL && oldgamestate != GS_LEVEL)
     {
@@ -319,7 +320,9 @@ void D_Display (void)
     // normal update
     if (!wipe)
     {
+#ifndef HEADLESS
 	I_FinishUpdate ();              // page flip or blit buffer
+#endif
 	return;
     }
     
@@ -338,9 +341,13 @@ void D_Display (void)
 	wipestart = nowtime;
 	done = wipe_ScreenWipe(wipe_Melt
 			       , 0, 0, SCREENWIDTH, SCREENHEIGHT, tics);
+#ifndef HEADLESS
 	I_UpdateNoBlit ();
+#endif
 	M_Drawer ();                            // menu is drawn even on top of wipes
+#ifndef HEADLESS
 	I_FinishUpdate ();                      // page flip or blit buffer
+#endif
     } while (!done);
 }
 
@@ -364,17 +371,23 @@ void D_DoomLoop (void)
 	debugfile = fopen (filename,"w");
     }
 	
+#ifndef HEADLESS
     I_InitGraphics ();
+#endif
 
     while (1)
     {
 	// frame syncronous IO operations
+#ifndef HEADLESS
 	I_StartFrame ();                
+#endif
 	
 	// process one or more tics
 	if (singletics)
 	{
+#ifndef HEADLESS
 	    I_StartTic ();
+#endif
 	    D_ProcessEvents ();
 	    G_BuildTiccmd (&netcmds[consoleplayer][maketic%BACKUPTICS]);
 	    if (advancedemo)
@@ -401,8 +414,10 @@ void D_DoomLoop (void)
 	// Synchronous sound output is explicitly called.
 #ifndef SNDINTR
 	// Update sound output.
+#ifndef HEADLESS
 	I_SubmitSound();
-#endif
+#endif // HEADLESS
+#endif // SNDSERV
     }
 }
 

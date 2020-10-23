@@ -106,7 +106,9 @@ int  I_GetTime (void)
 //
 void I_Init (void)
 {
+#ifndef HEADLESS
     I_InitSound();
+#endif
     //  I_InitGraphics();
 }
 
@@ -116,10 +118,14 @@ void I_Init (void)
 void I_Quit (void)
 {
     D_QuitNetGame ();
+#ifndef HEADLESS
     I_ShutdownSound();
     I_ShutdownMusic();
+#endif
     M_SaveDefaults ();
+#ifndef HEADLESS
     I_ShutdownGraphics();
+#endif
     exit(0);
 }
 
@@ -177,7 +183,8 @@ void I_Error (char *error, ...)
 	G_CheckDemoStatus();
 
     D_QuitNetGame ();
+#ifndef HEADLESS
     I_ShutdownGraphics();
-    
+#endif    
     exit(-1);
 }

@@ -572,9 +572,11 @@ void initdata(void)
 
 void quit(void)
 {
+#ifndef HEADLESS
     I_ShutdownMusic();
     I_ShutdownSound();
-    exit(0);
+#endif    
+	exit(0);
 }
 
 

@@ -999,6 +999,7 @@ static int st_palette = 0;
 
 void ST_doPaletteStuff(void)
 {
+#ifndef HEADLESS
 
     int		palette;
     byte*	pal;
@@ -1048,7 +1049,7 @@ void ST_doPaletteStuff(void)
 	pal = (byte *) W_CacheLumpNum (lu_palette, PU_CACHE)+palette*768;
 	I_SetPalette (pal);
     }
-
+#endif // HEADLESS
 }
 
 void ST_drawWidgets(boolean refresh)
@@ -1458,7 +1459,9 @@ void ST_Stop (void)
     if (st_stopped)
 	return;
 
+#ifndef HEADLESS
     I_SetPalette (W_CacheLumpNum (lu_palette, PU_CACHE));
+#endif
 
     st_stopped = true;
 }
