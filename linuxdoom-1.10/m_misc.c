@@ -463,18 +463,23 @@ WritePCXfile
     Z_Free (pcx);
 }
 
+#ifdef HEADLESS
+void I_ReadScreen (byte* scr)
+{
+    memcpy (scr, screens[0], SCREENWIDTH*SCREENHEIGHT);
+}
+#endif
 
 //
 // M_ScreenShot
 //
 void M_ScreenShot (void)
 {
-#ifndef HEADLESS
+//#ifndef HEADLESS
 
     int		i;
     byte*	linear;
     char	lbmname[12];
-    
     // munge planar buffer to linear
     linear = screens[2];
     I_ReadScreen (linear);
@@ -498,7 +503,7 @@ void M_ScreenShot (void)
 		  W_CacheLumpName ("PLAYPAL",PU_CACHE));
 	
     players[consoleplayer].message = "screen shot";
-#endif
+//#endif
 }
 
 
