@@ -629,6 +629,8 @@ void IdentifyVersion (void)
     sprintf(basedefault, "%s/.doomrc", home);
 #endif
 
+	D_AddFile("linux/doom1.wad");
+
     if (M_CheckParm ("-shdev"))
     {
 	gamemode = shareware;
