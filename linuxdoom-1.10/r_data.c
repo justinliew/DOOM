@@ -79,13 +79,13 @@ typedef struct {
 // which are to be combined in a predefined order.
 //
 typedef struct {
-	char           name[8];
-	boolean        masked;
-	short          width;
-	short          height;
-	unsigned short columndirectory; // OBSOLETE
-	short          patchcount;
-	mappatch_t     patches[1];
+	char       name[8];
+	boolean    masked;
+	short      width;
+	short      height;
+	unsigned   columndirectory; // OBSOLETE
+	short      patchcount;
+	mappatch_t patches[1];
 } maptexture_t;
 
 
