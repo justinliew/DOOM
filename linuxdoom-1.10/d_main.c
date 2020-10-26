@@ -33,6 +33,9 @@ static const char rcsid[] = "$Id: d_main.c,v 1.8 1997/02/03 22:45:09 b1 Exp $";
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <SDL/SDL.h>
+
+SDL_Surface *sdl_screen;
 #endif
 
 #include <fcntl.h>
@@ -349,7 +352,11 @@ D_Display(void)
 //
 extern boolean demorecording;
 
+#ifdef __EMSCRIPTEN__
+EM_BOOL
+#else
 void
+#endif
 D_OneLoop(void)
 {
 	// frame syncronous IO operations
@@ -379,6 +386,26 @@ D_OneLoop(void)
 	// Update display, next frame, with current state.
 	D_Display();
 
+#ifdef __EMSCRIPTEN__
+	if (SDL_MUSTLOCK(sdl_screen)) SDL_LockSurface(sdl_screen);
+
+    byte*	linear;
+    // munge planar buffer to linear
+    linear = screens[2];
+    I_ReadScreen (linear);
+
+	for (int i=0;i<SCREENWIDTH;++i) {
+		for (int j=0;j<SCREENHEIGHT;++j) {
+			int alpha = (i+j) % 255;
+			int val = linear[i*SCREENHEIGHT + j];
+
+			*((Uint32*)sdl_screen->pixels + i * SCREENHEIGHT + j) = val;
+		}
+	}
+	if (SDL_MUSTLOCK(sdl_screen)) SDL_UnlockSurface(sdl_screen);
+	SDL_Flip(sdl_screen);
+#endif
+
 #ifndef SNDSERV
 	// Sound mixing for the buffer is snychronous.
 	I_UpdateSound();
@@ -390,6 +417,9 @@ D_OneLoop(void)
 	I_SubmitSound();
 #endif // HEADLESS
 #endif // SNDSERV
+#ifdef __EMSCRIPTEN__
+return EM_TRUE;
+#endif
 }
 
 void
@@ -409,8 +439,9 @@ D_DoomLoop(void)
 	I_InitGraphics();
 #endif
 
+
 #ifdef __EMSCRIPTEN__
-	emscripten_request_animation_frame_loop(D_DoomLoop, 0);
+	emscripten_request_animation_frame_loop(D_OneLoop, 0);
 #else
 	while (1)
 	{
@@ -1136,6 +1167,11 @@ D_DoomMain(void)
 		else
 			D_StartTitle(); // start up intro loop
 	}
+
+#ifdef __EMSCRIPTEN__
+	SDL_Init(SDL_INIT_VIDEO);
+	sdl_screen = SDL_SetVideoMode(SCREENWIDTH, SCREENHEIGHT, 8, SDL_SWSURFACE);
+#endif
 
 	D_DoomLoop(); // never returns
 }
