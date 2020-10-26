@@ -629,7 +629,7 @@ void IdentifyVersion (void)
     sprintf(basedefault, "%s/.doomrc", home);
 #endif
 
-	D_AddFile("linux/doom1.wad");
+	D_AddFile("data/doom1.wad");
 
     if (M_CheckParm ("-shdev"))
     {
@@ -995,6 +995,10 @@ void D_DoomMain (void)
 	startmap = 1;
 	autostart = true;
     }
+	// TODO - for now we are forcing a SP load
+	startepisode = 1;
+	startmap = 1;
+	autostart = true;
 	
     p = M_CheckParm ("-timer");
     if (p && p < myargc-1 && deathmatch)

@@ -73,7 +73,9 @@ boolean NetListen (void);
 // NETWORKING
 //
 
-int	DOOMPORT =	(IPPORT_USERRESERVED +0x1d );
+// IPPORT_USERRESERVED isn't defined for WASM builds
+//int	DOOMPORT =	(IPPORT_USERRESERVED +0x1d );
+int DOOMPORT = (5000 + 0x1d);
 
 int			sendsocket;
 int			insocket;

@@ -131,7 +131,7 @@ static void derror(char* msg)
 }
 
 
-void strupr (char *s)
+void d_strupr (char *s)
 {
     while (*s)
 	*s++ = toupper(*s);
