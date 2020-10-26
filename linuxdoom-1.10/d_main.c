@@ -30,6 +30,10 @@ static const char rcsid[] = "$Id: d_main.c,v 1.8 1997/02/03 22:45:09 b1 Exp $";
 #define BGCOLOR 7
 #define FGCOLOR 8
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -346,6 +350,49 @@ D_Display(void)
 extern boolean demorecording;
 
 void
+D_OneLoop(void)
+{
+	// frame syncronous IO operations
+#ifndef HEADLESS
+	I_StartFrame();
+#endif
+
+	// process one or more tics
+	if (singletics) {
+#ifndef HEADLESS
+		I_StartTic();
+#endif
+		D_ProcessEvents();
+		G_BuildTiccmd(&netcmds[consoleplayer][maketic % BACKUPTICS]);
+		if (advancedemo)
+			D_DoAdvanceDemo();
+		M_Ticker();
+		G_Ticker();
+		gametic++;
+		maketic++;
+	} else {
+		TryRunTics(); // will run at least one tic
+	}
+
+	S_UpdateSounds(players[consoleplayer].mo); // move positional sounds
+
+	// Update display, next frame, with current state.
+	D_Display();
+
+#ifndef SNDSERV
+	// Sound mixing for the buffer is snychronous.
+	I_UpdateSound();
+#endif
+	// Synchronous sound output is explicitly called.
+#ifndef SNDINTR
+	// Update sound output.
+#ifndef HEADLESS
+	I_SubmitSound();
+#endif // HEADLESS
+#endif // SNDSERV
+}
+
+void
 D_DoomLoop(void)
 {
 	if (demorecording)
@@ -362,46 +409,14 @@ D_DoomLoop(void)
 	I_InitGraphics();
 #endif
 
-	while (1) {
-		// frame syncronous IO operations
-#ifndef HEADLESS
-		I_StartFrame();
-#endif
-
-		// process one or more tics
-		if (singletics) {
-#ifndef HEADLESS
-			I_StartTic();
-#endif
-			D_ProcessEvents();
-			G_BuildTiccmd(&netcmds[consoleplayer][maketic % BACKUPTICS]);
-			if (advancedemo)
-				D_DoAdvanceDemo();
-			M_Ticker();
-			G_Ticker();
-			gametic++;
-			maketic++;
-		} else {
-			TryRunTics(); // will run at least one tic
-		}
-
-		S_UpdateSounds(players[consoleplayer].mo); // move positional sounds
-
-		// Update display, next frame, with current state.
-		D_Display();
-
-#ifndef SNDSERV
-		// Sound mixing for the buffer is snychronous.
-		I_UpdateSound();
-#endif
-		// Synchronous sound output is explicitly called.
-#ifndef SNDINTR
-		// Update sound output.
-#ifndef HEADLESS
-		I_SubmitSound();
-#endif // HEADLESS
-#endif // SNDSERV
+#ifdef __EMSCRIPTEN__
+	emscripten_request_animation_frame_loop(D_DoomLoop, 0);
+#else
+	while (1)
+	{
+		D_OneLoop();
 	}
+#endif
 }
 
 
