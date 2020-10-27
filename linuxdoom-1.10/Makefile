@@ -5,8 +5,10 @@
 # $Log:$
 #
 CC=  gcc  # gcc or g++
+#WASI_CC=/opt/wasi-sdk/bin/clang --sysroot /opt/wasi-sdk/share/wasi-sysroot
 
-CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DOSX -DHEADLESS # -DUSEASM 
+CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS 
+#WASI_CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK # -DUSEASM 
 LDFLAGS=
 LIBS=-lm
 
