@@ -655,7 +655,9 @@ IdentifyVersion(void)
 	sprintf(basedefault, "%s/.doomrc", home);
 #endif
 
+#ifndef WASISDK
 	D_AddFile("data/doom1.wad");
+#endif
 
 	if (M_CheckParm("-shdev")) {
 		gamemode = shareware;
@@ -1038,7 +1040,12 @@ D_DoomMain(void)
 	Z_Init();
 
 	printf("W_Init: Init WADfiles.\n");
+#ifdef WASISDK
+#include "doom1.wad.h"
+	W_InitFromMemory(doom1_wad);
+#else
 	W_InitMultipleFiles(wadfiles);
+#endif
 
 
 	// Check for -file in shareware

@@ -182,7 +182,9 @@ HSendPacket
 	fprintf (debugfile,"\n");
     }
 
+#ifndef WASISDK
     I_NetCmd ();
+#endif
 }
 
 //
@@ -206,7 +208,9 @@ boolean HGetPacket (void)
 	return false;
 		
     doomcom->command = CMD_GET;
+#ifndef WASISDK
     I_NetCmd ();
+#endif
     
     if (doomcom->remotenode == -1)
 	return false;
@@ -573,7 +577,9 @@ void D_CheckNetGame (void)
     }
 	
     // I_InitNetwork sets doomcom and netgame
+#ifndef WASISDK
     I_InitNetwork ();
+#endif
     if (doomcom->id != DOOMCOM_ID)
 	I_Error ("Doomcom buffer invalid!");
     
@@ -659,7 +665,6 @@ void TryRunTics (void)
     
     // get available tics
     NetUpdate ();
-	
     lowtic = MAXINT;
     numplaying = 0;
     for (i=0 ; i<doomcom->numnodes ; i++)

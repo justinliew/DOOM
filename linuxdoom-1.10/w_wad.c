@@ -61,6 +61,7 @@ int			numlumps;
 
 void**			lumpcache;
 
+unsigned char*  memoryfile;
 
 #define strcmpi	strcasecmp
 
@@ -223,7 +224,70 @@ void W_AddFile (char *filename)
 	close (handle);
 }
 
+void W_InitFromMemory(unsigned char* data)
+{
+    wadinfo_t		header;
+    lumpinfo_t*		lump_p;
+    unsigned		i;
+    int			handle;
+    int			length;
+    filelump_t*		fileinfo;
+    filelump_t		singleinfo;
+    int			storehandle;
 
+	memoryfile = data;
+
+	memcpy(&header, data, sizeof(header));
+	if (strncmp(header.identification,"IWAD",4))
+	{
+	    // Homebrew levels?
+	    if (strncmp(header.identification,"PWAD",4))
+	    {
+		I_Error ("Wad header file doesn't have IWAD "
+			 "or PWAD id\n");
+	    }
+	}
+	header.numlumps = LONG(header.numlumps);
+	header.infotableofs = LONG(header.infotableofs);
+	length = header.numlumps*sizeof(filelump_t);
+	fileinfo = alloca (length);
+	memcpy(fileinfo, data + header.infotableofs, length);
+	numlumps += header.numlumps;
+
+    if (!numlumps)
+		I_Error ("W_InitFiles: no files found");
+
+	exit(0);
+    // will be realloced as lumps are added
+    lumpinfo = malloc(1);
+
+    // set up caching
+    int size = numlumps * sizeof(*lumpcache);
+    lumpcache = malloc (size);
+    
+    if (!lumpcache)
+		I_Error ("Couldn't allocate lumpcache");
+
+    memset (lumpcache,0, size);
+
+    // Fill in lumpinfo
+    lumpinfo = realloc (lumpinfo, numlumps*sizeof(lumpinfo_t));
+
+    if (!lumpinfo)
+		I_Error ("Couldn't realloc lumpinfo");
+	
+    storehandle = reloadname ? -1 : handle;
+	
+    for (i=0 ; i<numlumps ; i++,lump_p++, fileinfo++)
+    {
+		lump_p = &lumpinfo[i];
+		lump_p->handle = storehandle;
+		lump_p->position = LONG(fileinfo->filepos);
+		lump_p->size = LONG(fileinfo->size);
+		strncpy (lump_p->name, fileinfo->name, 8);
+    }
+
+}
 
 
 //
@@ -419,7 +483,23 @@ int W_LumpLength (int lump)
     return lumpinfo[lump].size;
 }
 
+void
+W_ReadMemoryLump
+( 	int lump,
+	void* dest) {
+    int		c;
+    lumpinfo_t*	l;
+    int		handle;
 
+    if (lump >= numlumps)
+	I_Error ("W_ReadLump: %i >= numlumps",lump);
+
+    l = lumpinfo+lump;
+
+	// copy data from l->position of l->size to dest
+	memcpy(dest, memoryfile + l->position, l->size);
+
+}
 
 //
 // W_ReadLump
@@ -431,6 +511,9 @@ W_ReadLump
 ( int		lump,
   void*		dest )
 {
+#ifdef WASISDK
+	W_ReadMemoryLump(lump, dest);
+#else
     int		c;
     lumpinfo_t*	l;
     int		handle;
@@ -462,6 +545,7 @@ W_ReadLump
 	close (handle);
 		
     // ??? I_EndRead ();
+#endif
 }
 
 

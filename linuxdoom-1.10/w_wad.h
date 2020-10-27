@@ -66,6 +66,7 @@ extern	void**		lumpcache;
 extern	lumpinfo_t*	lumpinfo;
 extern	int		numlumps;
 
+void W_InitFromMemory(unsigned char* data);
 void    W_InitMultipleFiles (char** filenames);
 void    W_Reload (void);
 
