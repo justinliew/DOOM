@@ -1041,8 +1041,8 @@ D_DoomMain(void)
 
 	printf("W_Init: Init WADfiles.\n");
 #ifdef WASISDK
-#include "doom1.wad.h"
-	W_InitFromMemory(doom1_wad);
+#include "memorywad.h"
+	W_InitFromMemory(D_GetInMemoryWad());
 #else
 	W_InitMultipleFiles(wadfiles);
 #endif
