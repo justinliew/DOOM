@@ -577,9 +577,7 @@ void D_CheckNetGame (void)
     }
 	
     // I_InitNetwork sets doomcom and netgame
-#ifndef WASISDK
     I_InitNetwork ();
-#endif
     if (doomcom->id != DOOMCOM_ID)
 	I_Error ("Doomcom buffer invalid!");
     
@@ -777,4 +775,7 @@ void TryRunTics (void)
 	}
 	NetUpdate ();	// check for new console commands
     }
+	if (gametic % 50 == 0) {
+		printf("Ran frame %d\n", gametic);
+	}
 }

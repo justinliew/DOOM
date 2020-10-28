@@ -20,7 +20,6 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifndef WASISDK
 
 static const char
 rcsid[] = "$Id: m_bbox.c,v 1.1 1997/02/03 22:45:10 b1 Exp $";
@@ -34,7 +33,9 @@ rcsid[] = "$Id: m_bbox.c,v 1.1 1997/02/03 22:45:10 b1 Exp $";
 #include <arpa/inet.h>
 #include <errno.h>
 #include <unistd.h>
+#ifndef WASISDK
 #include <netdb.h>
+#endif
 #include <sys/ioctl.h>
 
 #include "i_system.h"
@@ -93,6 +94,7 @@ void	(*netsend) (void);
 //
 int UDPsocket (void)
 {
+#ifndef WASISDK
     int	s;
 	
     // allocate a socket
@@ -101,6 +103,9 @@ int UDPsocket (void)
 	I_Error ("can't create socket: %s",strerror(errno));
 		
     return s;
+#else
+	return -1;
+#endif
 }
 
 //
@@ -111,6 +116,7 @@ BindToLocalPort
 ( int	s,
   int	port )
 {
+#ifndef WASISDK
     int			v;
     struct sockaddr_in	address;
 	
@@ -122,6 +128,7 @@ BindToLocalPort
     v = bind (s, (void *)&address, sizeof(address));
     if (v == -1)
 	I_Error ("BindToPort: bind: %s", strerror(errno));
+#endif
 }
 
 
@@ -130,6 +137,7 @@ BindToLocalPort
 //
 void PacketSend (void)
 {
+#ifndef WASISDK
     int		c;
     doomdata_t	sw;
 				
@@ -156,6 +164,7 @@ void PacketSend (void)
 	
     //	if (c == -1)
     //		I_Error ("SendPacket error: %s",strerror(errno));
+#endif
 }
 
 
@@ -164,6 +173,7 @@ void PacketSend (void)
 //
 void PacketGet (void)
 {
+#ifndef WASISDK
     int			i;
     int			c;
     struct sockaddr_in	fromaddress;
@@ -219,12 +229,14 @@ void PacketGet (void)
 	netbuffer->cmds[c].chatchar = sw.cmds[c].chatchar;
 	netbuffer->cmds[c].buttons = sw.cmds[c].buttons;
     }
+#endif
 }
 
 
 
 int GetLocalAddress (void)
 {
+#ifndef WASISDK
     char		hostname[1024];
     struct hostent*	hostentry;	// host information entry
     int			v;
@@ -239,6 +251,9 @@ int GetLocalAddress (void)
 	I_Error ("GetLocalAddress : gethostbyname: couldn't get local host");
 		
     return *(int *)hostentry->h_addr_list[0];
+#else
+	return 0;
+#endif
 }
 
 
@@ -304,6 +319,7 @@ void I_InitNetwork (void)
     doomcom->numnodes = 1;	// this node for sure
 	
     i++;
+#ifndef WASISDK
     while (++i < myargc && myargv[i][0] != '-')
     {
 	sendaddress[doomcom->numnodes].sin_family = AF_INET;
@@ -323,6 +339,7 @@ void I_InitNetwork (void)
 	}
 	doomcom->numnodes++;
     }
+#endif
 	
     doomcom->id = DOOMCOM_ID;
     doomcom->numplayers = doomcom->numnodes;
@@ -349,5 +366,3 @@ void I_NetCmd (void)
     else
 	I_Error ("Bad net cmd: %i\n",doomcom->command);
 }
-
-#endif
