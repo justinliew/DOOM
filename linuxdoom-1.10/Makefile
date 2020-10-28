@@ -7,7 +7,7 @@
 #CC=  gcc  # gcc or g++
 CC=/opt/wasi-sdk/bin/clang --sysroot /opt/wasi-sdk/share/wasi-sysroot
 
-#CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS 
+#CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK 
 CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK # -DUSEASM 
 LDFLAGS=
 LIBS=-lm
@@ -26,6 +26,7 @@ OBJS=				\
 		$(O)/f_finale.o		\
 		$(O)/f_wipe.o 		\
 		$(O)/d_main.o			\
+		$(O)/memorywad.o			\
 		$(O)/d_net.o			\
 		$(O)/d_items.o		\
 		$(O)/g_game.o			\
@@ -82,6 +83,7 @@ all:	 $(O)/linuxxdoom
 clean:
 	rm -f *.o *~ *.flc
 	rm -f linux/*.o
+	rm linux/linuxxdoom
 
 $(O)/linuxxdoom:	$(OBJS) $(O)/i_main.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) $(O)/i_main.o \
