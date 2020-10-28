@@ -257,7 +257,6 @@ void W_InitFromMemory(unsigned char* data)
     if (!numlumps)
 		I_Error ("W_InitFiles: no files found");
 
-	exit(0);
     // will be realloced as lumps are added
     lumpinfo = malloc(1);
 
