@@ -82,6 +82,10 @@ SDL_Surface *sdl_screen;
 
 #include "d_main.h"
 
+#ifdef XQD
+#include "xqd.h"
+#endif
+
 //
 // D-DoomLoop()
 // Not a globally visible function,
@@ -442,10 +446,57 @@ D_DoomLoop(void)
 
 #ifdef __EMSCRIPTEN__
 	emscripten_request_animation_frame_loop(D_OneLoop, 0);
+#elif defined(XQD)
+	int ret = xqd_init(XQD_ABI_VERSION);
+	printf("XQD Init: %d\n", ret);
+
+	RequestHandle reqhandle;
+	BodyHandle bodyhandle;
+	ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
+	printf("xqd_req_body_downstream_get: %d\n", ret);
+
+	char buf[10000];
+	size_t nread=0;
+	ret = xqd_body_read(bodyhandle, buf, 10000, &nread);
+	printf("Read body, length %zu\n", nread);
+
+	ret = xqd_req_uri_get(reqhandle, buf, 10000, &nread);
+	printf("Read url, length %zu, %s\n", nread, buf);
+
+	// TODO - how do we send input?
+	// set savebuffer, length
+//	G_DoDeserialize();
+	D_OneLoop();
+	D_OneLoop();
+
+//	G_DoSerialize();
+	// savebuffer, length
+
+	int outlen;
+	byte* data = M_InMemoryScreenShot(&outlen);
+
+	ResponseHandle resphandle;
+	BodyHandle respbodyhandle;
+
+	xqd_resp_new(&resphandle);
+	xqd_body_new(&respbodyhandle);
+	int nwritten=0;
+	ret = xqd_body_write(respbodyhandle, data, outlen, BodyWriteEndBack, &nwritten);
+	const char* header_name = "Content-Type";
+	const char* header_value = "image/png";
+	xqd_resp_header_append(resphandle, header_name, strlen(header_name), header_value, strlen(header_value) );
+
+	printf("We wrote %zu bytes (ret %d)", nwritten, ret);
+
+	xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 #else
-	while (1)
+//	while (1)
 	{
 		D_OneLoop();
+		D_OneLoop();
+
+		int outlen;
+		byte* data = M_InMemoryScreenShot(&outlen);
 	}
 #endif
 }
@@ -999,9 +1050,10 @@ D_DoomMain(void)
 		startmap = 1;
 		autostart = true;
 	}
+	srand(I_GetTime());
 	// TODO - for now we are forcing a SP load
 	startepisode = 1;
-	startmap = 1;
+	startmap = rand() % 8 + 1;
 	autostart = true;
 
 	p = M_CheckParm("-timer");

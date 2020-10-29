@@ -59,6 +59,10 @@ rcsid[] = "$Id: m_misc.c,v 1.6 1997/02/03 22:45:10 b1 Exp $";
 
 #include "m_misc.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+
 //
 // M_DrawText
 // Returns the final X coordinate
@@ -463,6 +467,51 @@ WritePCXfile
     Z_Free (pcx);
 }
 
+struct pngdata {
+	int size;
+	byte* data;
+};
+
+void writefunc(void *context, void *data, int size)
+{
+	struct pngdata* dest = (struct pngdata*)context;
+	dest->data = Z_Malloc(size, PU_STATIC, NULL);
+	dest->size = size;
+	for (int i=0;i<size;++i)
+	 {
+		 dest->data[i] = ((byte*)data)[i];
+	 }
+}
+
+//
+// WritePNGToMemory
+//
+byte*
+WritePNGToMemory(
+  byte*		data,
+  int		width,
+  int		height,
+  byte*		palette,
+  int*		outlength )
+{
+    byte* flat = Z_Malloc (width*height*3, PU_STATIC, NULL);
+	struct pngdata png;
+
+    for (int i=0 ; i<width*height ; i++)
+    {
+		int index = data[i] * 3;
+		flat[i*3] = palette[index];
+		flat[i*3+1] = palette[index+1];
+		flat[i*3+2] = palette[index+2];
+    }
+	stbi_write_png_to_func(writefunc, &png, width, height, 3, flat, 0);
+#ifndef WASISDK
+	stbi_write_png("test.png", width, height, 3, flat, 0);
+#endif
+	*outlength = png.size;
+	return png.data;
+}
+
 #ifdef HEADLESS
 void I_ReadScreen (byte* scr)
 {
@@ -504,6 +553,23 @@ void M_ScreenShot (void)
 	
     players[consoleplayer].message = "screen shot";
 //#endif
+}
+
+void M_PngDoWrite(void *context, void *data, int size)
+{
+	printf("M_PngDoWrite %d", size);
+}
+
+byte* M_InMemoryScreenShot(int* outlength)
+{
+//#ifndef HEADLESS
+
+    byte*	linear;
+    // munge planar buffer to linear
+    linear = screens[2];
+    I_ReadScreen (linear);
+
+	return WritePNGToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
 }
 
 
