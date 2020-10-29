@@ -82,6 +82,8 @@ SDL_Surface *sdl_screen;
 
 #include "d_main.h"
 
+#include "base64.h"
+
 #ifdef XQD
 #include "xqd.h"
 #endif
@@ -469,11 +471,21 @@ D_DoomLoop(void)
 	D_OneLoop();
 	D_OneLoop();
 
-//	G_DoSerialize();
-	// savebuffer, length
+	// get framebuffer
+	int ss_len;
+	byte* ss_data = M_InMemoryScreenShot(&ss_len);
+	int ss_b64_len;
+	byte* ss_b64 = base64_encode(ss_data, ss_len,&ss_b64_len);
 
-	int outlen;
-	byte* data = M_InMemoryScreenShot(&outlen);
+	// get gamestate
+	int gs_len;
+	byte* gs_data = G_DoSerialize(&gs_len);
+	int gs_b64_len;
+	byte* gs_b64 = base64_encode(gs_data, gs_len, &gs_b64_len);
+
+	int buflen = ss_b64_len + gs_b64_len + 29;
+	byte* finalbuffer = Z_Malloc(buflen, PU_STATIC, 0); // ugh ths 30 seems problematic
+	sprintf(finalbuffer, "{\"framebuffer\":\"%s\",\"state\":\"%s\"}", ss_b64, gs_b64);
 
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
@@ -481,12 +493,15 @@ D_DoomLoop(void)
 	xqd_resp_new(&resphandle);
 	xqd_body_new(&respbodyhandle);
 	int nwritten=0;
-	ret = xqd_body_write(respbodyhandle, data, outlen, BodyWriteEndBack, &nwritten);
-	const char* header_name = "Content-Type";
-	const char* header_value = "image/png";
-	xqd_resp_header_append(resphandle, header_name, strlen(header_name), header_value, strlen(header_value) );
+	ret = xqd_body_write(respbodyhandle, finalbuffer, buflen, BodyWriteEndBack, &nwritten);
 
-	printf("We wrote %zu bytes (ret %d)", nwritten, ret);
+	const char* cors_header_name = "Access-Control-Allow-Origin";
+	const char* cors_header_value = "*";
+	xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
+
+	const char* vary_header_name = "Vary";
+	const char* vary_header_value = "Origin";
+	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
 	xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 #else
@@ -495,8 +510,21 @@ D_DoomLoop(void)
 		D_OneLoop();
 		D_OneLoop();
 
-		int outlen;
-		byte* data = M_InMemoryScreenShot(&outlen);
+		// get framebuffer
+		int ss_len;
+		byte* ss_data = M_InMemoryScreenShot(&ss_len);
+		int ss_b64_len;
+		byte* ss_b64 = base64_encode(ss_data, ss_len,&ss_b64_len);
+
+		// get gamestate
+		int gs_len;
+		byte* gs_data = G_DoSerialize(&gs_len);
+		int gs_b64_len;
+		byte* gs_b64 = base64_encode(gs_data, gs_len, &gs_b64_len);
+
+		int buflen = ss_b64_len + gs_b64_len + 29;
+		byte* finalbuffer = Z_Malloc(buflen, PU_STATIC, 0); // ugh ths 30 seems problematic
+		sprintf(finalbuffer, "{\"framebuffer\":\"%s\",\"state\":\"%s\"}", ss_b64, gs_b64);
 	}
 #endif
 }
@@ -1050,10 +1078,9 @@ D_DoomMain(void)
 		startmap = 1;
 		autostart = true;
 	}
-	srand(I_GetTime());
 	// TODO - for now we are forcing a SP load
 	startepisode = 1;
-	startmap = rand() % 8 + 1;
+	startmap = 1;
 	autostart = true;
 
 	p = M_CheckParm("-timer");

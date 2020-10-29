@@ -555,11 +555,6 @@ void M_ScreenShot (void)
 //#endif
 }
 
-void M_PngDoWrite(void *context, void *data, int size)
-{
-	printf("M_PngDoWrite %d", size);
-}
-
 byte* M_InMemoryScreenShot(int* outlength)
 {
 //#ifndef HEADLESS

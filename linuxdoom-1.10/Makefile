@@ -76,7 +76,8 @@ OBJS=				\
 		$(O)/s_sound.o		\
 		$(O)/z_zone.o			\
 		$(O)/info.o				\
-		$(O)/sounds.o
+		$(O)/sounds.o			\
+		$(O)/base64.o
 
 all:	 $(O)/linuxxdoom
 

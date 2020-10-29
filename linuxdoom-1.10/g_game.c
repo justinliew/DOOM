@@ -1251,6 +1251,58 @@ void G_DoLoadGame (void)
     R_FillBackScreen ();   
 } 
  
+void G_DoDeserialize (void) 
+{ 
+    int		length; 
+    int		i; 
+    int		a,b,c; 
+    char	vcheck[VERSIONSIZE]; 
+	 
+    gameaction = ga_nothing; 
+	 
+//    length = M_ReadFile (savename, &savebuffer); 
+    save_p = savebuffer;
+    
+    // skip the description field 
+    memset (vcheck,0,sizeof(vcheck)); 
+    sprintf (vcheck,"version %i",VERSION); 
+    if (strcmp (save_p, vcheck)) 
+	return;				// bad version 
+    save_p += VERSIONSIZE; 
+			 
+    gameskill = *save_p++; 
+    gameepisode = *save_p++; 
+    gamemap = *save_p++; 
+    for (i=0 ; i<MAXPLAYERS ; i++) 
+	playeringame[i] = *save_p++; 
+
+    // load a base level 
+    G_InitNew (gameskill, gameepisode, gamemap); 
+ 
+    // get the times 
+    a = *save_p++; 
+    b = *save_p++; 
+    c = *save_p++; 
+    leveltime = (a<<16) + (b<<8) + c; 
+	 
+    // dearchive all the modifications
+    P_UnArchivePlayers (); 
+    P_UnArchiveWorld (); 
+    P_UnArchiveThinkers (); 
+    P_UnArchiveSpecials (); 
+ 
+    if (*save_p != 0x1d) 
+	I_Error ("Bad savegame");
+    
+    // done 
+    Z_Free (savebuffer); 
+ 
+    if (setsizeneeded)
+	R_ExecuteSetViewSize ();
+    
+    // draw the pattern into the back screen
+    R_FillBackScreen ();   
+} 
 
 //
 // G_SaveGame
@@ -1319,6 +1371,51 @@ void G_DoSaveGame (void)
     R_FillBackScreen ();	
 } 
  
+ // savebuffer, length are set
+ // how are we getting data out of this?
+byte* G_DoSerialize (int* outlen) 
+{ 
+    char	name2[VERSIONSIZE]; 
+    int		length; 
+    int		i; 
+
+    save_p = savebuffer = screens[1]+0x4000; 
+
+    memset (name2,0,sizeof(name2)); 
+    sprintf (name2,"version %i",VERSION); 
+    memcpy (save_p, name2, VERSIONSIZE); 
+    save_p += VERSIONSIZE; 
+	 
+    *save_p++ = gameskill; 
+    *save_p++ = gameepisode; 
+    *save_p++ = gamemap; 
+    for (i=0 ; i<MAXPLAYERS ; i++) 
+	*save_p++ = playeringame[i]; 
+    *save_p++ = leveltime>>16; 
+    *save_p++ = leveltime>>8; 
+    *save_p++ = leveltime; 
+ 
+    P_ArchivePlayers (); 
+    P_ArchiveWorld (); 
+    P_ArchiveThinkers (); 
+    P_ArchiveSpecials (); 
+	 
+    *save_p++ = 0x1d;		// consistancy marker 
+	 
+    length = save_p - savebuffer; 
+    if (length > SAVEGAMESIZE) 
+	I_Error ("Savegame buffer overrun"); 
+//    M_WriteFile (name, savebuffer, length); 
+    gameaction = ga_nothing; 
+    savedescription[0] = 0;		 
+	 
+    players[consoleplayer].message = GGSAVED; 
+
+    // draw the pattern into the back screen
+    R_FillBackScreen ();
+	*outlen = length;
+	return savebuffer;
+} 
 
 //
 // G_InitNew

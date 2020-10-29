@@ -27,6 +27,8 @@
 #include "d_event.h"
 
 
+byte* G_DoSerialize (int* outlen);
+void G_DoDeserialize(void);
 
 //
 // GAME
