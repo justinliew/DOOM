@@ -463,12 +463,10 @@ D_DoomLoop(void)
 #ifdef __EMSCRIPTEN__
 	emscripten_request_animation_frame_loop(D_OneLoop, 0);
 #elif defined(XQD)
-	int ret = xqd_init(XQD_ABI_VERSION);
-	printf("XQD Init: %d\n", ret);
 
 	RequestHandle reqhandle;
 	BodyHandle bodyhandle;
-	ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
+	int ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
 	printf("xqd_req_body_downstream_get: %d\n", ret);
 
 	char uribuf[200];
@@ -937,6 +935,49 @@ FindResponseFile(void)
 void
 D_DoomMain(void)
 {
+	// very first thing we do is check URL so we can either bail or serve html/js if necessary
+#ifdef XQD
+	int ret = xqd_init(XQD_ABI_VERSION);
+
+	RequestHandle reqhandle;
+	BodyHandle bodyhandle;
+	ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
+	char uribuf[200];
+	size_t nread=0;
+
+	ret = xqd_req_uri_get(reqhandle, uribuf, 200, &nread);
+	printf("Read url, length %zu, %s\n", nread, uribuf);
+	if (strstr(uribuf, "favicon.ico")) {
+		// TODO - what to do here?
+		return;
+	}
+	if (!strstr(uribuf, "doomframe")) {
+		printf("Handle root serving\n");
+		// we need to serve the html here
+		ResponseHandle resphandle;
+		BodyHandle respbodyhandle;
+
+		xqd_resp_new(&resphandle);
+		xqd_body_new(&respbodyhandle);
+
+
+		// int nwritten=0;
+		// ret = xqd_body_write(respbodyhandle, finalbuffer, buflen, BodyWriteEndBack, &nwritten);
+
+		const char* cors_header_name = "Access-Control-Allow-Origin";
+		const char* cors_header_value = "*";
+		xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
+
+		const char* vary_header_name = "Vary";
+		const char* vary_header_value = "Origin";
+		xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
+
+		int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+		return;
+	}
+
+#endif
+
 	int  p;
 	char file[256];
 
