@@ -28,7 +28,7 @@
 
 
 byte* G_DoSerialize (int* outlen);
-void G_DoDeserialize(void);
+void G_DoDeserialize(byte* data, int length);
 
 //
 // GAME

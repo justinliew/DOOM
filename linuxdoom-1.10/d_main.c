@@ -81,6 +81,7 @@ SDL_Surface *sdl_screen;
 
 
 #include "d_main.h"
+#include "d_ticcmd.h"
 
 #include "base64.h"
 
@@ -428,6 +429,19 @@ return EM_TRUE;
 #endif
 }
 
+unsigned long
+hash(byte *data, int len)
+{
+	unsigned long hash = 5381;
+
+	for (int i=0;i<len;++i) {
+		byte b = *data++;
+		hash = ((hash << 5) + hash) + b; /* hash * 33 + c */
+	}
+
+	return hash;
+}
+
 void
 D_DoomLoop(void)
 {
@@ -457,35 +471,67 @@ D_DoomLoop(void)
 	ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
 	printf("xqd_req_body_downstream_get: %d\n", ret);
 
-	char buf[10000];
+	char uribuf[200];
 	size_t nread=0;
-	ret = xqd_body_read(bodyhandle, buf, 10000, &nread);
-	printf("Read body, length %zu\n", nread);
 
-	ret = xqd_req_uri_get(reqhandle, buf, 10000, &nread);
-	printf("Read url, length %zu, %s\n", nread, buf);
+	ret = xqd_req_uri_get(reqhandle, uribuf, 200, &nread);
+	printf("Read url, length %zu, %s\n", nread, uribuf);
+	if (strstr(uribuf, "favicon.ico")) {
+		// TODO - what to do here?
+		return;
+	}
 
-	// TODO - how do we send input?
-	// set savebuffer, length
-//	G_DoDeserialize();
+	char* bodybuf = Z_Malloc(100000,PU_STATIC,0);
+	int bodyindex = 0;
+	do {
+		ret = xqd_body_read(bodyhandle, bodybuf+bodyindex, 100000-bodyindex, &nread);
+		bodyindex += nread;
+	} while (nread > 0 && bodyindex < 100000);
+
+	// if we have a body, parse it here	
+	if (bodyindex > 0) {
+		int state_len = 0;
+		memcpy(&state_len, bodybuf, sizeof(int));
+		state_len = ntohl(state_len);
+
+		byte* serialized = Z_Malloc(state_len, PU_STATIC, 0);
+		memcpy(serialized, &bodybuf[4], state_len);
+
+		G_DoDeserialize(serialized, state_len);
+		Z_Free(serialized);
+
+		ticcmd_t tick;
+		memcpy(&tick, &bodybuf[4+state_len], 8);
+		printf("Tick starts at %d %hhx %hhx %d %d %hhx %hhx\n", 4+state_len, tick.forwardmove, tick.sidemove, tick.angleturn,tick.consistancy,tick.chatchar,tick.buttons);
+		tick.forwardmove=5;
+		tick.angleturn = 10;
+		D_SetCloudTic(tick);
+	}
+done_parsing:
+	Z_Free(bodybuf);
+
 	D_OneLoop();
 	D_OneLoop();
 
 	// get framebuffer
 	int ss_len;
 	byte* ss_data = M_InMemoryScreenShot(&ss_len);
-	int ss_b64_len;
-	byte* ss_b64 = base64_encode(ss_data, ss_len,&ss_b64_len);
 
 	// get gamestate
 	int gs_len;
 	byte* gs_data = G_DoSerialize(&gs_len);
-	int gs_b64_len;
-	byte* gs_b64 = base64_encode(gs_data, gs_len, &gs_b64_len);
 
-	int buflen = ss_b64_len + gs_b64_len + 29;
-	byte* finalbuffer = Z_Malloc(buflen, PU_STATIC, 0); // ugh ths 30 seems problematic
-	sprintf(finalbuffer, "{\"framebuffer\":\"%s\",\"state\":\"%s\"}", ss_b64, gs_b64);
+	int buflen = ss_len + gs_len + 2*sizeof(int);
+	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0); // ugh ths 30 seems problematic
+	byte* fbp = finalbuffer;
+	
+	memcpy(fbp,&ss_len,sizeof(int));
+	fbp += sizeof(int);
+	memcpy(fbp,ss_data,ss_len);
+	fbp += ss_len;
+	memcpy(fbp, &gs_len, sizeof(int));
+	fbp += sizeof(int);
+	memcpy(fbp, gs_data,gs_len);
 
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
@@ -503,28 +549,13 @@ D_DoomLoop(void)
 	const char* vary_header_value = "Origin";
 	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
-	xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 #else
-//	while (1)
+
+	while (1)
 	{
 		D_OneLoop();
-		D_OneLoop();
 
-		// get framebuffer
-		int ss_len;
-		byte* ss_data = M_InMemoryScreenShot(&ss_len);
-		int ss_b64_len;
-		byte* ss_b64 = base64_encode(ss_data, ss_len,&ss_b64_len);
-
-		// get gamestate
-		int gs_len;
-		byte* gs_data = G_DoSerialize(&gs_len);
-		int gs_b64_len;
-		byte* gs_b64 = base64_encode(gs_data, gs_len, &gs_b64_len);
-
-		int buflen = ss_b64_len + gs_b64_len + 29;
-		byte* finalbuffer = Z_Malloc(buflen, PU_STATIC, 0); // ugh ths 30 seems problematic
-		sprintf(finalbuffer, "{\"framebuffer\":\"%s\",\"state\":\"%s\"}", ss_b64, gs_b64);
 	}
 #endif
 }

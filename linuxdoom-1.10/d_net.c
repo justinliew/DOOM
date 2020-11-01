@@ -44,6 +44,12 @@ static const char rcsid[] = "$Id: d_net.c,v 1.3 1997/02/03 22:01:47 b1 Exp $";
 doomcom_t*	doomcom;	
 doomdata_t*	netbuffer;		// points inside doomcom
 
+ticcmd_t cloudtic;
+
+void D_SetCloudTic(ticcmd_t tick)
+{
+	cloudtic = tick;
+}
 
 //
 // NETWORKING
@@ -348,7 +354,11 @@ void GetPackets (void)
 	    remoteresend[netnode] = false;
 		
 	    start = nettics[netnode] - realstart;		
+#ifdef WASISDK
+		src = &cloudtic;
+#else
 	    src = &netbuffer->cmds[start];
+#endif
 
 	    while (nettics[netnode] < realend)
 	    {

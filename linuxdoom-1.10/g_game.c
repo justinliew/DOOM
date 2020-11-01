@@ -607,7 +607,6 @@ void G_Ticker (void)
     int		i;
     int		buf; 
     ticcmd_t*	cmd;
-    
     // do player reborns if needed
     for (i=0 ; i<MAXPLAYERS ; i++) 
 	if (playeringame[i] && players[i].playerstate == PST_REBORN) 
@@ -1251,29 +1250,33 @@ void G_DoLoadGame (void)
     R_FillBackScreen ();   
 } 
  
-void G_DoDeserialize (void) 
+void G_DoDeserialize (byte* data, int length) 
 { 
-    int		length; 
     int		i; 
     int		a,b,c; 
     char	vcheck[VERSIONSIZE]; 
 	 
     gameaction = ga_nothing; 
 	 
-//    length = M_ReadFile (savename, &savebuffer); 
-    save_p = savebuffer;
+    save_p = data;
     
     // skip the description field 
     memset (vcheck,0,sizeof(vcheck)); 
     sprintf (vcheck,"version %i",VERSION); 
-    if (strcmp (save_p, vcheck)) 
-	return;				// bad version 
+
+	char dataversion[VERSIONSIZE];
+	strncpy(dataversion, save_p, VERSIONSIZE);
+
+    if (strcmp (save_p, vcheck)) {
+		printf("Bad version. Should be %s but is %s\n", vcheck, dataversion);
+		return;				// bad version 
+	}
     save_p += VERSIONSIZE; 
 			 
     gameskill = *save_p++; 
     gameepisode = *save_p++; 
     gamemap = *save_p++; 
-    for (i=0 ; i<MAXPLAYERS ; i++) 
+    for (i=0 ; i<MAXPLAYERS ; i++)
 	playeringame[i] = *save_p++; 
 
     // load a base level 
@@ -1294,8 +1297,6 @@ void G_DoDeserialize (void)
     if (*save_p != 0x1d) 
 	I_Error ("Bad savegame");
     
-    // done 
-    Z_Free (savebuffer); 
  
     if (setsizeneeded)
 	R_ExecuteSetViewSize ();
@@ -1385,7 +1386,7 @@ byte* G_DoSerialize (int* outlen)
     sprintf (name2,"version %i",VERSION); 
     memcpy (save_p, name2, VERSIONSIZE); 
     save_p += VERSIONSIZE; 
-	 
+
     *save_p++ = gameskill; 
     *save_p++ = gameepisode; 
     *save_p++ = gamemap; 
@@ -1394,7 +1395,7 @@ byte* G_DoSerialize (int* outlen)
     *save_p++ = leveltime>>16; 
     *save_p++ = leveltime>>8; 
     *save_p++ = leveltime; 
- 
+
     P_ArchivePlayers (); 
     P_ArchiveWorld (); 
     P_ArchiveThinkers (); 
@@ -1412,7 +1413,7 @@ byte* G_DoSerialize (int* outlen)
     players[consoleplayer].message = GGSAVED; 
 
     // draw the pattern into the back screen
-    R_FillBackScreen ();
+//    R_FillBackScreen ();
 	*outlen = length;
 	return savebuffer;
 } 

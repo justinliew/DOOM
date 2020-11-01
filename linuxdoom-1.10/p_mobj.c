@@ -563,7 +563,9 @@ void P_RemoveMobj (mobj_t* mobj)
     P_UnsetThingPosition (mobj);
     
     // stop any playing sound
+#ifndef HEADLESS
     S_StopSound (mobj);
+#endif
     
     // free block
     P_RemoveThinker ((thinker_t*)mobj);

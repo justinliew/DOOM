@@ -30,6 +30,7 @@
 #pragma interface
 #endif
 
+void D_SetCloudTic(ticcmd_t tick);
 
 //
 // Network play related stuff.
