@@ -2,6 +2,23 @@
 
 <canvas id="framebuffer"></canvas>
 
+<style>
+div {
+    white-space: pre-wrap;
+}
+</style>
+
+<div>
+W to move forward
+S to move backward
+A to turn left
+D to turn right
+Q to strafe left
+E to strafe right
+F to fire
+U to use
+</div>
+
 <script>
 var Game = {
 	stopMain: {},
@@ -84,10 +101,10 @@ function GetFrame() {
 			var frame = new Image();
 			frame.onload = function() {
 				const canvas = document.getElementById('framebuffer');
-				canvas.width = 1600;
-				canvas.height = 1200;
+				canvas.width = 800;
+				canvas.height = 600;
 				const ctx = canvas.getContext('2d');
-				ctx.drawImage(frame,0,0,600,400);
+				ctx.drawImage(frame,0,0,800,600);
 				URL.revokeObjectURL(blob);
 			}
 			frame.src = imageUrl;

@@ -495,11 +495,6 @@ D_DoomLoop(void)
 		G_DoDeserialize(serialized, state_len);
 		Z_Free(serialized);
 
-		bodybuf[5+state_len],
-		bodybuf[6+state_len],
-		bodybuf[7+state_len],
-		bodybuf[8+state_len],
-		bodybuf[9+state_len]);
 		int num_events = 0;
 		memcpy(&num_events, &bodybuf[4+state_len], sizeof(int));
 		num_events = ntohl(num_events);
