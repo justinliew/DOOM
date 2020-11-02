@@ -336,6 +336,7 @@ D_Display(void)
 
 	wipestart = I_GetTime() - 1;
 
+#ifndef HEADLESS
 	do {
 		do {
 			nowtime = I_GetTime();
@@ -351,6 +352,7 @@ D_Display(void)
 		I_FinishUpdate(); // page flip or blit buffer
 #endif
 	} while (!done);
+#endif
 }
 
 
@@ -473,13 +475,6 @@ D_DoomLoop(void)
 
 	char uribuf[200];
 	size_t nread=0;
-
-	ret = xqd_req_uri_get(reqhandle, uribuf, 200, &nread);
-	printf("Read url, length %zu, %s\n", nread, uribuf);
-	if (strstr(uribuf, "favicon.ico")) {
-		// TODO - what to do here?
-		return;
-	}
 
 	char* bodybuf = Z_Malloc(100000,PU_STATIC,0);
 	int bodyindex = 0;
