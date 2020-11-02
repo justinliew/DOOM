@@ -4,4 +4,7 @@
 unsigned char*
 D_GetInMemoryWad();
 
+char*
+D_GetIndex();
+
 #endif

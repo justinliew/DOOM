@@ -6,7 +6,8 @@
 var Game = {
 	stopMain: {},
 	curState: {},
-	dirty: true
+	dirty: true,
+	keys: {},
 };
 
 // typedef struct
@@ -23,7 +24,8 @@ function GeneratePostBody() {
 	if (!Game.curState.byteLength) {
 		return;
 	}
-	var body = new ArrayBuffer(Game.curState.byteLength + 12); // 4 bytes for length of state, and then 8 bytes for ticcmd
+	var numevents = Object.keys(Game.keys).length;
+	var body = new ArrayBuffer(4 + Game.curState.byteLength + 4 + numevents);
 	var view = new DataView(body);
 	view.setUint32(0,Game.curState.byteLength);
 
@@ -32,13 +34,14 @@ function GeneratePostBody() {
 		view.setUint8(i+4, Game.curState[i]);
 	}
 
-	let base = 4 + Game.curState.byteLength;
-	view.setUint8[base+0] = 10;
-	view.setUint8[base+1] = 11;
-	view.setUint16[base+2] = 12;
-	view.setUint16[base+4] = 13;
-	view.setUint8[base+6] = 14;
-	view.setUint8[base+7] = 15;
+	view.setUint32(Game.curState.byteLength + 4, numevents);
+	let base = 8 + Game.curState.byteLength;
+	var index=0;
+	for (var key in Game.keys) {
+		console.log(key);
+		view.setUint8(base+index,key);
+		index++;
+	}
 
 	return body;
 }
@@ -56,6 +59,14 @@ function download(filename, data) {
 
     document.body.removeChild(element);
 }
+
+document.addEventListener('keydown', (event) => {
+  Game.keys[event.keyCode] = 1;
+}, false);
+
+document.addEventListener('keyup', (event) => {
+	delete Game.keys[event.keyCode];
+}, false);
 
 function GetFrame() {
 	var xhttp = new XMLHttpRequest();

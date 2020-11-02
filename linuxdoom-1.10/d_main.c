@@ -85,6 +85,8 @@ SDL_Surface *sdl_screen;
 
 #include "base64.h"
 
+#include "memorywad.h"
+
 #ifdef XQD
 #include "xqd.h"
 #endif
@@ -493,16 +495,29 @@ D_DoomLoop(void)
 		G_DoDeserialize(serialized, state_len);
 		Z_Free(serialized);
 
-		ticcmd_t tick;
-		memcpy(&tick, &bodybuf[4+state_len], 8);
-		printf("Tick starts at %d %hhx %hhx %d %d %hhx %hhx\n", 4+state_len, tick.forwardmove, tick.sidemove, tick.angleturn,tick.consistancy,tick.chatchar,tick.buttons);
-		tick.forwardmove=5;
-		tick.angleturn = 10;
-		D_SetCloudTic(tick);
+		bodybuf[5+state_len],
+		bodybuf[6+state_len],
+		bodybuf[7+state_len],
+		bodybuf[8+state_len],
+		bodybuf[9+state_len]);
+		int num_events = 0;
+		memcpy(&num_events, &bodybuf[4+state_len], sizeof(int));
+		num_events = ntohl(num_events);
+		printf("We got %d events\n", num_events);
+
+		for (int e=0;e<num_events;++e) {
+			byte event = bodybuf[8+state_len+e];
+			event_t es;
+			es.type = ev_keydown;
+			es.data1 = event;
+			D_PostEvent(&es);
+		}
 	}
 done_parsing:
 	Z_Free(bodybuf);
 
+	// TODO - if we are having issues with input, one thing to check is that the first update
+	// isn't just consuming all the input
 	D_OneLoop();
 	D_OneLoop();
 
@@ -955,9 +970,10 @@ D_DoomMain(void)
 		xqd_resp_new(&resphandle);
 		xqd_body_new(&respbodyhandle);
 
+		char* data = D_GetIndex();
 
-		// int nwritten=0;
-		// ret = xqd_body_write(respbodyhandle, finalbuffer, buflen, BodyWriteEndBack, &nwritten);
+		int nwritten=0;
+		ret = xqd_body_write(respbodyhandle, data, strlen(data), BodyWriteEndBack, &nwritten);
 
 		const char* cors_header_name = "Access-Control-Allow-Origin";
 		const char* cors_header_value = "*";

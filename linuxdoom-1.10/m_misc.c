@@ -242,15 +242,15 @@ default_t	defaults[] =
     {"music_volume",&snd_MusicVolume, 8},
     {"show_messages",&showMessages, 1},
 
-    {"key_right",&key_right, KEY_RIGHTARROW},
-    {"key_left",&key_left, KEY_LEFTARROW},
-    {"key_up",&key_up, KEY_UPARROW},
-    {"key_down",&key_down, KEY_DOWNARROW},
-    {"key_strafeleft",&key_strafeleft, ','},
-    {"key_straferight",&key_straferight, '.'},
+    {"key_right",&key_right, 'D'},
+    {"key_left",&key_left, 'A'},
+    {"key_up",&key_up, 'W'},
+    {"key_down",&key_down, 'S'},
+    {"key_strafeleft",&key_strafeleft, 'Q'},
+    {"key_straferight",&key_straferight, 'E'},
 
-    {"key_fire",&key_fire, KEY_RCTRL},
-    {"key_use",&key_use, ' '},
+    {"key_fire",&key_fire, 'F'},
+    {"key_use",&key_use, 'U'},
     {"key_strafe",&key_strafe, KEY_RALT},
     {"key_speed",&key_speed, KEY_RSHIFT},
 
