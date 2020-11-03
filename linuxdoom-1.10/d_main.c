@@ -105,7 +105,6 @@ D_DoomLoop(void);
 
 
 char *wadfiles[MAXWADFILES];
-boolean rawframebuffer = false;
 
 
 boolean devparm;     // started game with -devparm
@@ -519,7 +518,7 @@ done_parsing:
 
 	// get framebuffer
 	int ss_len;
-	byte* ss_data = M_InMemoryScreenShot(rawframebuffer, &ss_len);
+	byte* ss_data = M_InMemoryScreenShot(&ss_len);
 
 	// get gamestate
 	int gs_len;
@@ -541,6 +540,8 @@ done_parsing:
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
 
+	printf("Body size is %d (%d + %d)\n", buflen, ss_len, gs_len);
+
 	xqd_resp_new(&resphandle);
 	xqd_body_new(&respbodyhandle);
 	int nwritten=0;
@@ -561,7 +562,7 @@ done_parsing:
 	{
 		D_OneLoop();
 		int ss_len;
-		byte* ss_data = M_InMemoryScreenShot(true, &ss_len);
+		byte* ss_data = M_InMemoryScreenShot(&ss_len);
 		Z_Free(ss_data);
 
 	}

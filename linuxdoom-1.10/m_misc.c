@@ -589,7 +589,7 @@ void M_ScreenShot (void)
 //#endif
 }
 
-byte* M_InMemoryScreenShot(boolean rawframebuffer, int* outlength)
+byte* M_InMemoryScreenShot(int* outlength)
 {
 //#ifndef HEADLESS
 
@@ -598,11 +598,7 @@ byte* M_InMemoryScreenShot(boolean rawframebuffer, int* outlength)
     linear = screens[2];
     I_ReadScreen (linear);
 
-	if (rawframebuffer) {
-		return WriteFlatToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
-	} else {
-		return WritePNGToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
-	}
+	return WriteFlatToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
 }
 
 
