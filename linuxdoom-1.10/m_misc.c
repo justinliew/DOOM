@@ -525,6 +525,27 @@ WritePNGToMemory(
 	return png.data;
 }
 
+byte*
+WriteFlatToMemory(
+  byte*		data,
+  int		width,
+  int		height,
+  byte*		palette,
+  int*		outlength )
+{
+    byte* flat = Z_Malloc (width*height*3, PU_STATIC, NULL);
+
+    for (int i=0 ; i<width*height ; i++)
+    {
+		int index = data[i] * 3;
+		flat[i*3] = palette[index];
+		flat[i*3+1] = palette[index+1];
+		flat[i*3+2] = palette[index+2];
+    }
+	*outlength = width * height * 3;
+	return flat;
+}
+
 #ifdef HEADLESS
 void I_ReadScreen (byte* scr)
 {
@@ -568,7 +589,7 @@ void M_ScreenShot (void)
 //#endif
 }
 
-byte* M_InMemoryScreenShot(int* outlength)
+byte* M_InMemoryScreenShot(boolean rawframebuffer, int* outlength)
 {
 //#ifndef HEADLESS
 
@@ -577,7 +598,11 @@ byte* M_InMemoryScreenShot(int* outlength)
     linear = screens[2];
     I_ReadScreen (linear);
 
-	return WritePNGToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
+	if (rawframebuffer) {
+		return WriteFlatToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
+	} else {
+		return WritePNGToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
+	}
 }
 
 

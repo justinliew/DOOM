@@ -55,7 +55,6 @@ function GeneratePostBody() {
 	let base = 8 + Game.curState.byteLength;
 	var index=0;
 	for (var key in Game.keys) {
-		console.log(key);
 		view.setUint8(base+index,key);
 		index++;
 	}
@@ -95,19 +94,32 @@ function GetFrame() {
 			let fb_len = dv.getInt32(0,true); // framebuffer length
 			let fb = new Uint8Array(arraybuffer.slice(4));
 
-			// Obtain a blob: URL for the image data.
-			var blob = new Blob( [ fb ], { type: "image/png" } );
-			var imageUrl = URL.createObjectURL( blob );
-			var frame = new Image();
-			frame.onload = function() {
-				const canvas = document.getElementById('framebuffer');
-				canvas.width = 800;
-				canvas.height = 600;
-				const ctx = canvas.getContext('2d');
-				ctx.drawImage(frame,0,0,800,600);
-				URL.revokeObjectURL(blob);
+			const rawcanvas = document.getElementById('framebuffer');
+			rawcanvas.width = 960;
+			rawcanvas.height = 600;
+			const ctx = rawcanvas.getContext('2d');
+
+			var imageData = ctx.getImageData(0, 0, 100, 100);
+			var data = new Uint8ClampedArray(4 * 320 * 200);
+
+			var rawoffset=0;
+			for (var i = 0; i < data.length; i++) {
+				if ((i+1) % 4 == 0) {
+					data[i] = 255;
+				} else {
+					data[i] = fb[rawoffset++];
+				}
 			}
-			frame.src = imageUrl;
+
+			var imageData = new ImageData(data, 320,200);
+			tempcanvas = document.createElement('canvas');
+			tempcanvas.width=320;
+			tempcanvas.height=200;
+			var tempctx = tempcanvas.getContext('2d');
+			tempctx.putImageData(imageData,0,0);
+
+			ctx.scale(3,3);
+			ctx.drawImage(tempcanvas,0,0);
 
 			let gs_len = dv.getInt32(4+fb_len,true);
 			Game.curState = new Uint8Array(arraybuffer.slice(8+fb_len));
@@ -115,7 +127,7 @@ function GetFrame() {
 		}
 	};
 	// Access-Control-Allow-Origin	
-	xhttp.open("POST", "https://definitely-shining-penguin.edgecompute.app/doomframe", true);
+	xhttp.open("POST", "https://definitely-shining-penguin.edgecompute.app/rawdoomframe", true);
 	xhttp.responseType = "arraybuffer";
 	var body = GeneratePostBody();
     xhttp.send(body);

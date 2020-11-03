@@ -105,6 +105,7 @@ D_DoomLoop(void);
 
 
 char *wadfiles[MAXWADFILES];
+boolean rawframebuffer = false;
 
 
 boolean devparm;     // started game with -devparm
@@ -518,7 +519,7 @@ done_parsing:
 
 	// get framebuffer
 	int ss_len;
-	byte* ss_data = M_InMemoryScreenShot(&ss_len);
+	byte* ss_data = M_InMemoryScreenShot(rawframebuffer, &ss_len);
 
 	// get gamestate
 	int gs_len;
@@ -531,6 +532,7 @@ done_parsing:
 	memcpy(fbp,&ss_len,sizeof(int));
 	fbp += sizeof(int);
 	memcpy(fbp,ss_data,ss_len);
+	Z_Free(ss_data);
 	fbp += ss_len;
 	memcpy(fbp, &gs_len, sizeof(int));
 	fbp += sizeof(int);
@@ -558,6 +560,9 @@ done_parsing:
 	while (1)
 	{
 		D_OneLoop();
+		int ss_len;
+		byte* ss_data = M_InMemoryScreenShot(true, &ss_len);
+		Z_Free(ss_data);
 
 	}
 #endif
@@ -932,7 +937,6 @@ FindResponseFile(void)
 			break;
 		}
 }
-
 
 //
 // D_DoomMain

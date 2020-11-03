@@ -44,7 +44,7 @@ M_ReadFile
 
 void M_ScreenShot (void);
 
-byte* M_InMemoryScreenShot(int*);
+byte* M_InMemoryScreenShot(boolean, int*);
 
 void M_LoadDefaults (void);
 
