@@ -87,6 +87,8 @@ SDL_Surface *sdl_screen;
 
 #include "memorywad.h"
 
+#include "miniz.h"
+
 #ifdef XQD
 #include "xqd.h"
 #endif
@@ -105,6 +107,8 @@ D_DoomLoop(void);
 
 
 char *wadfiles[MAXWADFILES];
+
+boolean zipped_response = false;
 
 
 boolean devparm;     // started game with -devparm
@@ -446,6 +450,21 @@ hash(byte *data, int len)
 	return hash;
 }
 
+void printDiff(const char* type, byte* data, byte* last, int len ) {
+	// the idea here is that delta is small and maybe similar, so we can ideally compress this data using sometihng like Huffman
+	int sum = 0;
+	int numzero = 0;
+	for (int i=0; i < len; ++i) {
+		byte delta = data[i] - last[i];
+		if (delta == 0) {
+			numzero++;
+		}
+		sum += (int)delta;
+	}
+	float avg = (float)sum / (float)len;
+	printf("%s - avg sum is %f, %f zero\n", type, avg, (float)numzero/(float)len);
+}
+
 void
 D_DoomLoop(void)
 {
@@ -544,8 +563,26 @@ done_parsing:
 
 	xqd_resp_new(&resphandle);
 	xqd_body_new(&respbodyhandle);
-	int nwritten=0;
-	ret = xqd_body_write(respbodyhandle, finalbuffer, buflen, BodyWriteEndBack, &nwritten);
+
+	if (zipped_response) {
+		clock_t start = clock();
+//int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level);
+		byte* dest = Z_Malloc(buflen, PU_STATIC,0);
+		int dest_len = buflen;
+		int ret = mz_compress2(dest, &dest_len, finalbuffer, buflen, MZ_BEST_SPEED);
+		printf("Compression returned %d; size is %lu\n", ret, dest_len);
+		clock_t end = clock();
+		printf("Compression took %f\n", (double)(end-start) / CLOCKS_PER_SEC);
+		int nwritten=0;
+		ret = xqd_body_write(respbodyhandle, dest, dest_len, BodyWriteEndBack, &nwritten);
+
+		const char* deflate_header_name = "Content-Encoding";
+		const char* deflate_header_value = "deflate";
+		xqd_resp_header_append(resphandle, deflate_header_name, strlen(deflate_header_name), deflate_header_value, strlen(deflate_header_value) );
+	} else {
+		int nwritten=0;
+		ret = xqd_body_write(respbodyhandle, finalbuffer, buflen, BodyWriteEndBack, &nwritten);
+	}
 
 	const char* cors_header_name = "Access-Control-Allow-Origin";
 	const char* cors_header_value = "*";
@@ -558,13 +595,33 @@ done_parsing:
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 #else
 
+	int ss_len, gs_len;
+
+	D_OneLoop();
+	byte* last_ss = M_InMemoryScreenShot(&ss_len);
+	byte* last_gs = G_DoSerialize(&gs_len);
 	while (1)
 	{
-		D_OneLoop();
-		int ss_len;
-		byte* ss_data = M_InMemoryScreenShot(&ss_len);
-		Z_Free(ss_data);
+		event_t es;
+		es.type = ev_keydown;
+		es.data1 = 68;
+		D_PostEvent(&es);
 
+		// event_t ef;
+		// ef.type = ev_keydown;
+		// ef.data1 = 87;
+		// D_PostEvent(&ef);
+
+		D_OneLoop();
+		byte* ss_data = M_InMemoryScreenShot(&ss_len);
+		byte* gs_data = G_DoSerialize(&gs_len);
+
+		printDiff("Frame", ss_data, last_ss, ss_len);
+		printDiff("State", gs_data, last_gs, gs_len);
+
+		Z_Free(last_ss);
+		last_ss = ss_data;
+		last_gs = gs_data;
 	}
 #endif
 }
@@ -985,6 +1042,14 @@ D_DoomMain(void)
 
 		int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 		return;
+	}
+
+	if (strstr(uribuf, "zipdoomframe")) {
+		printf("Zipped response\n");
+		zipped_response = true;
+	} else {
+		printf("Raw response\n");
+		zipped_response = false;
 	}
 
 #endif
