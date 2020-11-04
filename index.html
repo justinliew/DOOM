@@ -102,14 +102,22 @@ function GetFrame() {
 			var imageData = ctx.getImageData(0, 0, 100, 100);
 			var data = new Uint8ClampedArray(4 * 320 * 200);
 
-			var rawoffset=0;
-			for (var i = 0; i < data.length; i++) {
-				if ((i+1) % 4 == 0) {
-					data[i] = 255;
-				} else {
-					data[i] = fb[rawoffset++];
-				}
+			var start = performance.now();
+			var palette = new Uint8ClampedArray(256*3);
+			for (var i = 0; i < 256 * 3; ++i) {
+				palette[i] = fb[i];
 			}
+			//for (var i = 256*3; i < fb.length; i += 4) {
+			fb_index = 256*3;
+			for (var i = 0; i < data.length; i += 4) {
+				data[i] = palette[fb[fb_index]*3];
+				data[i+1] = palette[fb[fb_index]*3+1];
+				data[i+2] = palette[fb[fb_index]*3+2];
+				data[i+3] = 255;
+				fb_index++;
+			}
+			var end = performance.now();
+			console.log("Image copy loop took " + (end-start));
 
 			var imageData = new ImageData(data, 320,200);
 			tempcanvas = document.createElement('canvas');

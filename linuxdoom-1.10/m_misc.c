@@ -533,16 +533,18 @@ WriteFlatToMemory(
   byte*		palette,
   int*		outlength )
 {
-    byte* flat = Z_Malloc (width*height*3, PU_STATIC, NULL);
+	int framebuffer_len = width * height;
+	int palette_len = 256 * 3;
+    byte* flat = Z_Malloc (framebuffer_len + palette_len, PU_STATIC, NULL);
 
+	for (int i=0;i<palette_len;++i) {
+		flat[i] = palette[i];
+	}
     for (int i=0 ; i<width*height ; i++)
     {
-		int index = data[i] * 3;
-		flat[i*3] = palette[index];
-		flat[i*3+1] = palette[index+1];
-		flat[i*3+2] = palette[index+2];
+		flat[palette_len + i] = data[i];
     }
-	*outlength = width * height * 3;
+	*outlength = framebuffer_len + palette_len;
 	return flat;
 }
 

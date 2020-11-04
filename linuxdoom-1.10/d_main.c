@@ -1046,7 +1046,7 @@ D_DoomMain(void)
 
 	if (strstr(uribuf, "zipdoomframe")) {
 		printf("Zipped response\n");
-		zipped_response = true;
+		zipped_response = false;
 	} else {
 		printf("Raw response\n");
 		zipped_response = false;
