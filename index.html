@@ -23,9 +23,39 @@ U to use
 var Game = {
 	stopMain: {},
 	curState: {},
-	dirty: true,
+	startpost: true,
 	keys: {},
+	frames: {},
+	numframes: 0,
+	frameIndex: 0,
+	lastTick: 0,
+	lastRender: 0,
+
+	maxposttimes: 100,
+	posttimes: [100],
+	numposttimes: 0,
+	postindex: 0,
+	postfull: false,
 };
+
+function AddPostTime(time) {
+	if (!Game.postfull) {
+		Game.numposttimes++;
+	}
+	if (Game.numposttimes == Game.maxposttimes) {
+		Game.postfull = true;
+	}
+	Game.postindex = (Game.postindex + 1) % Game.numposttimes;
+	Game.posttimes[Game.postindex] = time;
+}
+
+function GetAveragePostTime() {
+	var total = 0;
+	for (i=0;i<Game.numposttimes;++i) {
+		total += Game.posttimes[i];
+	}
+	return total / Game.numposttimes;
+}
 
 // typedef struct
 // {
@@ -84,54 +114,72 @@ document.addEventListener('keyup', (event) => {
 	delete Game.keys[event.keyCode];
 }, false);
 
+function RenderFrame(index) {
+	const rawcanvas = document.getElementById('framebuffer');
+	rawcanvas.width = 960;
+	rawcanvas.height = 600;
+	const ctx = rawcanvas.getContext('2d');
+
+	var imageData = ctx.getImageData(0, 0, 100, 100);
+	var data = new Uint8ClampedArray(4 * 320 * 200);
+
+	var palette = new Uint8ClampedArray(256*3);
+	for (var i = 0; i < 256 * 3; ++i) {
+		palette[i] = Game.frames[index][i];
+	}
+	//for (var i = 256*3; i < fb.length; i += 4) {
+	fb_index = 256*3;
+	for (var i = 0; i < data.length; i += 4) {
+		data[i] = palette[Game.frames[index][fb_index]*3];
+		data[i+1] = palette[Game.frames[index][fb_index]*3+1];
+		data[i+2] = palette[Game.frames[index][fb_index]*3+2];
+		data[i+3] = 255;
+		fb_index++;
+	}
+
+	var imageData = new ImageData(data, 320,200);
+	tempcanvas = document.createElement('canvas');
+	tempcanvas.width=320;
+	tempcanvas.height=200;
+	var tempctx = tempcanvas.getContext('2d');
+	tempctx.putImageData(imageData,0,0);
+
+	ctx.scale(3,3);
+	ctx.drawImage(tempcanvas,0,0);
+	Game.lastRender = performance.now();
+}
+
 function GetFrame() {
 	var xhttp = new XMLHttpRequest();
+	var startpost = performance.now();
 	xhttp.onload = function(oEvent) {
+		var posttime = performance.now() - startpost;
+		AddPostTime(posttime);
 		var arraybuffer = xhttp.response;
 		if (arraybuffer) {
 			var byteArray = new Uint8Array(arraybuffer);
 			var dv = new DataView(arraybuffer);
-			let fb_len = dv.getInt32(0,true); // framebuffer length
-			let fb = new Uint8Array(arraybuffer.slice(4));
 
-			const rawcanvas = document.getElementById('framebuffer');
-			rawcanvas.width = 960;
-			rawcanvas.height = 600;
-			const ctx = rawcanvas.getContext('2d');
+			let fb_len1 = dv.getInt32(0,true); // framebuffer length
+			let fb1 = new Uint8Array(arraybuffer.slice(4));
+			Game.frames[0] = fb1;
 
-			var imageData = ctx.getImageData(0, 0, 100, 100);
-			var data = new Uint8ClampedArray(4 * 320 * 200);
+			let fb_len2 = dv.getInt32(4+fb_len1,true); // framebuffer length
+			let fb2 = new Uint8Array(arraybuffer.slice(8+fb_len1));
 
-			var start = performance.now();
-			var palette = new Uint8ClampedArray(256*3);
-			for (var i = 0; i < 256 * 3; ++i) {
-				palette[i] = fb[i];
-			}
-			//for (var i = 256*3; i < fb.length; i += 4) {
-			fb_index = 256*3;
-			for (var i = 0; i < data.length; i += 4) {
-				data[i] = palette[fb[fb_index]*3];
-				data[i+1] = palette[fb[fb_index]*3+1];
-				data[i+2] = palette[fb[fb_index]*3+2];
-				data[i+3] = 255;
-				fb_index++;
-			}
-			var end = performance.now();
-			console.log("Image copy loop took " + (end-start));
+			Game.frames[1] = fb2;
 
-			var imageData = new ImageData(data, 320,200);
-			tempcanvas = document.createElement('canvas');
-			tempcanvas.width=320;
-			tempcanvas.height=200;
-			var tempctx = tempcanvas.getContext('2d');
-			tempctx.putImageData(imageData,0,0);
+			let fb_len3 = dv.getInt32(8+fb_len1+fb_len2,true); // framebuffer length
+			let fb3 = new Uint8Array(arraybuffer.slice(12+fb_len1+fb_len2));
 
-			ctx.scale(3,3);
-			ctx.drawImage(tempcanvas,0,0);
+			Game.frames[2] = fb3;
 
-			let gs_len = dv.getInt32(4+fb_len,true);
-			Game.curState = new Uint8Array(arraybuffer.slice(8+fb_len));
-			Game.dirty = true;
+			Game.numframes = 3;
+			Game.frameIndex = 0;
+
+			let gs_len = dv.getInt32(12+fb_len1+fb_len2+fb_len3,true);
+			Game.curState = new Uint8Array(arraybuffer.slice(16+fb_len1+fb_len2+fb_len3));
+			Game.startpost = true;
 		}
 	};
 	// Access-Control-Allow-Origin	
@@ -144,33 +192,27 @@ function GetFrame() {
 ;(function () {
 	function main( tFrame ) {
 	Game.stopMain = window.requestAnimationFrame( main );
-	var nextTick = Game.lastTick + Game.tickLength;
-	var numTicks = 0;
+	var delta = tFrame-Game.lastTick;
+	Game.lastTick = tFrame;
+	console.log("Average: ", GetAveragePostTime());
 
-	// If tFrame < nextTick then 0 ticks need to be updated (0 is default for numTicks).
-	// If tFrame = nextTick then 1 tick needs to be updated (and so forth).
-	// Note: As we mention in summary, you should keep track of how large numTicks is.
-	// If it is large, then either your game was asleep, or the machine cannot keep up.
-	if (tFrame > nextTick) {
-		var timeSinceTick = tFrame - Game.lastTick;
-		numTicks = Math.floor( timeSinceTick / Game.tickLength );
+	if (Game.numframes > 0) {
+		if (performance.now() - Game.lastRender > GetAveragePostTime() / Game.numframes) {
+			console.log("FPS ", performance.now() - Game.lastRender);
+			RenderFrame(Game.frameIndex);
+			if (Game.frameIndex < Game.numframes-1)
+				Game.frameIndex++;
+		}
 	}
 
-	if (Game.dirty)
+	if (Game.startpost)
 	{
 		GetFrame();
-		Game.dirty = false;
+		Game.startpost = false;
 	}
-
-	// time
-
 }
 
 	Game.lastTick = performance.now();
-	Game.lastRender = Game.lastTick; // Pretend the first draw was on first update.
-	Game.tickLength = 100; // This sets your simulation to run at 10Hz (100ms)
-
-	//setInitialState();
 	main(performance.now());
 })();
 </script>

@@ -539,22 +539,45 @@ done_parsing:
 	D_OneLoop();
 
 	// get framebuffer
-	int ss_len;
-	byte* ss_data = M_InMemoryScreenShot(&ss_len);
+	int ss_len1;
+	byte* ss_data1 = M_InMemoryScreenShot(&ss_len1);
+
+	D_OneLoop();
+
+	int ss_len2;
+	byte* ss_data2 = M_InMemoryScreenShot(&ss_len2);
+
+	D_OneLoop();
+
+	int ss_len3;
+	byte* ss_data3 = M_InMemoryScreenShot(&ss_len3);
 
 	// get gamestate
 	int gs_len;
 	byte* gs_data = G_DoSerialize(&gs_len);
 
-	int buflen = ss_len + gs_len + 2*sizeof(int);
+	int buflen = ss_len1 + ss_len2 + ss_len3 + gs_len + 4*sizeof(int);
 	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0); // ugh ths 30 seems problematic
 	byte* fbp = finalbuffer;
 	
-	memcpy(fbp,&ss_len,sizeof(int));
+	memcpy(fbp,&ss_len1,sizeof(int));
 	fbp += sizeof(int);
-	memcpy(fbp,ss_data,ss_len);
-	Z_Free(ss_data);
-	fbp += ss_len;
+	memcpy(fbp,ss_data1,ss_len1);
+	Z_Free(ss_data1);
+	fbp += ss_len1;
+
+	memcpy(fbp,&ss_len2,sizeof(int));
+	fbp += sizeof(int);
+	memcpy(fbp,ss_data2,ss_len2);
+	Z_Free(ss_data2);
+	fbp += ss_len2;
+
+	memcpy(fbp,&ss_len3,sizeof(int));
+	fbp += sizeof(int);
+	memcpy(fbp,ss_data3,ss_len3);
+	Z_Free(ss_data3);
+	fbp += ss_len3;
+
 	memcpy(fbp, &gs_len, sizeof(int));
 	fbp += sizeof(int);
 	memcpy(fbp, gs_data,gs_len);
@@ -562,7 +585,7 @@ done_parsing:
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
 
-//	printf("Body size is %d (%d + %d)\n", buflen, ss_len, gs_len);
+	printf("Body size is %d (%d + %d + %d + %d)\n", buflen, ss_len1, ss_len2, ss_len3 ,gs_len);
 
 	xqd_resp_new(&resphandle);
 	xqd_body_new(&respbodyhandle);
