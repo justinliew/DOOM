@@ -31,6 +31,8 @@ rcsid[] = "$Id: i_main.c,v 1.4 1997/02/03 22:45:10 b1 Exp $";
 #include "m_argv.h"
 #include "d_main.h"
 
+#include <time.h>
+
 int
 main
 ( int		argc,
@@ -39,7 +41,10 @@ main
     myargc = argc; 
     myargv = argv; 
  
+	clock_t start = clock();
     D_DoomMain (); 
+	clock_t end = clock();
+	printf("MAIN: %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 
     return 0;
 } 

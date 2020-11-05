@@ -393,13 +393,19 @@ D_OneLoop(void)
 		gametic++;
 		maketic++;
 	} else {
+		clock_t ticsstart = clock();
 		TryRunTics(); // will run at least one tic
+		clock_t ticend = clock();
+		printf("	TryRunTics took  %f\n", 1000.0*(double)(ticend-ticsstart) / CLOCKS_PER_SEC);
 	}
 
 	S_UpdateSounds(players[consoleplayer].mo); // move positional sounds
 
 	// Update display, next frame, with current state.
+	clock_t dispstart = clock();
 	D_Display();
+	clock_t dispend = clock();
+	printf("	D_display took  %f\n", 1000.0*(double)(dispend-dispstart) / CLOCKS_PER_SEC);
 
 #ifdef __EMSCRIPTEN__
 	if (SDL_MUSTLOCK(sdl_screen)) SDL_LockSurface(sdl_screen);
@@ -490,7 +496,6 @@ D_DoomLoop(void)
 	RequestHandle reqhandle;
 	BodyHandle bodyhandle;
 	int ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
-	printf("xqd_req_body_downstream_get: %d\n", ret);
 
 	char uribuf[200];
 	size_t nread=0;
@@ -530,8 +535,6 @@ D_DoomLoop(void)
 done_parsing:
 	Z_Free(bodybuf);
 
-	// TODO - if we are having issues with input, one thing to check is that the first update
-	// isn't just consuming all the input
 	D_OneLoop();
 	D_OneLoop();
 
@@ -559,20 +562,20 @@ done_parsing:
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
 
-	printf("Body size is %d (%d + %d)\n", buflen, ss_len, gs_len);
+//	printf("Body size is %d (%d + %d)\n", buflen, ss_len, gs_len);
 
 	xqd_resp_new(&resphandle);
 	xqd_body_new(&respbodyhandle);
 
 	if (zipped_response) {
-		clock_t start = clock();
+		clock_t zipstart = clock();
 //int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level);
 		byte* dest = Z_Malloc(buflen, PU_STATIC,0);
 		int dest_len = buflen;
 		int ret = mz_compress2(dest, &dest_len, finalbuffer, buflen, MZ_BEST_SPEED);
-		printf("Compression returned %d; size is %lu\n", ret, dest_len);
-		clock_t end = clock();
-		printf("Compression took %f\n", (double)(end-start) / CLOCKS_PER_SEC);
+//		printf("Compression returned %d; size is %lu\n", ret, dest_len);
+		clock_t zipend = clock();
+		printf("	Compression took %f\n", 1000.0 * (double)(zipend-zipstart) / CLOCKS_PER_SEC);
 		int nwritten=0;
 		ret = xqd_body_write(respbodyhandle, dest, dest_len, BodyWriteEndBack, &nwritten);
 
@@ -594,14 +597,9 @@ done_parsing:
 
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 #else
-
-	int ss_len, gs_len;
-
-	D_OneLoop();
-	byte* last_ss = M_InMemoryScreenShot(&ss_len);
-	byte* last_gs = G_DoSerialize(&gs_len);
-	while (1)
+	for (int i=0;i<10;++i)
 	{
+		clock_t start = clock();
 		event_t es;
 		es.type = ev_keydown;
 		es.data1 = 68;
@@ -612,16 +610,8 @@ done_parsing:
 		// ef.data1 = 87;
 		// D_PostEvent(&ef);
 
+
 		D_OneLoop();
-		byte* ss_data = M_InMemoryScreenShot(&ss_len);
-		byte* gs_data = G_DoSerialize(&gs_len);
-
-		printDiff("Frame", ss_data, last_ss, ss_len);
-		printDiff("State", gs_data, last_gs, gs_len);
-
-		Z_Free(last_ss);
-		last_ss = ss_data;
-		last_gs = gs_data;
 	}
 #endif
 }
@@ -1046,7 +1036,7 @@ D_DoomMain(void)
 
 	if (strstr(uribuf, "zipdoomframe")) {
 		printf("Zipped response\n");
-		zipped_response = true;
+		zipped_response = false;
 	} else {
 		printf("Raw response\n");
 		zipped_response = false;
