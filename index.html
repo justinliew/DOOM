@@ -194,11 +194,9 @@ function GetFrame() {
 	Game.stopMain = window.requestAnimationFrame( main );
 	var delta = tFrame-Game.lastTick;
 	Game.lastTick = tFrame;
-	console.log("Average: ", GetAveragePostTime());
 
 	if (Game.numframes > 0) {
 		if (performance.now() - Game.lastRender > GetAveragePostTime() / Game.numframes) {
-			console.log("FPS ", performance.now() - Game.lastRender);
 			RenderFrame(Game.frameIndex);
 			if (Game.frameIndex < Game.numframes-1)
 				Game.frameIndex++;
