@@ -270,7 +270,7 @@ default_t	defaults[] =
     {"joyb_use",&joybuse,3},
     {"joyb_speed",&joybspeed,2},
 
-    {"screenblocks",&screenblocks, 9},
+    {"screenblocks",&screenblocks, 10},
     {"detaillevel",&detailLevel, 0},
 
     {"snd_channels",&numChannels, 3},
@@ -600,6 +600,8 @@ byte* M_InMemoryScreenShot(int* outlength)
     linear = screens[2];
     I_ReadScreen (linear);
 
+	// switch to this to write screenshots locally
+//	return WritePNGToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
 	return WriteFlatToMemory(linear, SCREENWIDTH, SCREENHEIGHT, W_CacheLumpName("PLAYPAL", PU_CACHE), outlength);
 }
 

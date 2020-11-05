@@ -26,6 +26,7 @@ rcsid[] = "$Id: g_game.c,v 1.8 1997/02/03 22:45:09 b1 Exp $";
 
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "doomdef.h" 
 #include "doomstat.h"
@@ -1280,7 +1281,9 @@ void G_DoDeserialize (byte* data, int length)
 	playeringame[i] = *save_p++; 
 
     // load a base level 
+#ifndef WASISDK
     G_InitNew (gameskill, gameepisode, gamemap); 
+#endif
  
     // get the times 
     a = *save_p++; 
@@ -1288,6 +1291,7 @@ void G_DoDeserialize (byte* data, int length)
     c = *save_p++; 
     leveltime = (a<<16) + (b<<8) + c; 
 	 
+	clock_t tick = clock();
     // dearchive all the modifications
     P_UnArchivePlayers (); 
     P_UnArchiveWorld (); 
@@ -1576,7 +1580,11 @@ G_InitNew
 	    break;
 	} 
  
+	clock_t loadstart = clock();
+	printf("G_DoLoadLevel start\n");
     G_DoLoadLevel (); 
+	clock_t loadend = clock();
+	printf("G_DoLoadLevel: %f\n", 1000.0*(double)(loadend-loadstart) / CLOCKS_PER_SEC);
 } 
  
 
