@@ -507,6 +507,7 @@ D_DoomLoop(void)
 		bodyindex += nread;
 	} while (nread > 0 && bodyindex < 100000);
 
+	int num_frames = 0;
 	// if we have a body, parse it here	
 	if (bodyindex > 0) {
 		int state_len = 0;
@@ -531,52 +532,49 @@ D_DoomLoop(void)
 			es.data1 = event;
 			D_PostEvent(&es);
 		}
+		memcpy(&num_frames, &bodybuf[8+state_len+num_events], sizeof(int));
+		num_frames = ntohl(num_frames);
+		printf("We are requesting %d frames\n", num_frames);
 	}
 done_parsing:
 	Z_Free(bodybuf);
 
 	D_OneLoop();
-	D_OneLoop();
 
-	// get framebuffer
-	int ss_len1;
-	byte* ss_data1 = M_InMemoryScreenShot(&ss_len1);
+	const expected_ss_len = SCREENWIDTH*SCREENHEIGHT+768;
+	if (num_frames > 10 || num_frames < 1) {
+		num_frames = 3;
+	}
 
-	D_OneLoop();
+	byte* frame_ptrs[10];
+	for (int i=0;i<num_frames;++i) {
+		D_OneLoop();
 
-	int ss_len2;
-	byte* ss_data2 = M_InMemoryScreenShot(&ss_len2);
-
-	D_OneLoop();
-
-	int ss_len3;
-	byte* ss_data3 = M_InMemoryScreenShot(&ss_len3);
+		// get framebuffer
+		int ss_len;
+		byte* ss = M_InMemoryScreenShot(&ss_len);
+		if (ss_len != expected_ss_len) {
+			I_Error("We got a bad framebuffer of %d bytes\n", ss_len);
+		}
+		frame_ptrs[i] = ss;
+	}
 
 	// get gamestate
 	int gs_len;
 	byte* gs_data = G_DoSerialize(&gs_len);
 
-	int buflen = ss_len1 + ss_len2 + ss_len3 + gs_len + 4*sizeof(int);
-	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0); // ugh ths 30 seems problematic
+	int buflen = expected_ss_len*num_frames + gs_len + 2*sizeof(int);
+	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0);
 	byte* fbp = finalbuffer;
-	
-	memcpy(fbp,&ss_len1,sizeof(int));
-	fbp += sizeof(int);
-	memcpy(fbp,ss_data1,ss_len1);
-	Z_Free(ss_data1);
-	fbp += ss_len1;
 
-	memcpy(fbp,&ss_len2,sizeof(int));
+	memcpy(fbp, &num_frames, sizeof(int));
 	fbp += sizeof(int);
-	memcpy(fbp,ss_data2,ss_len2);
-	Z_Free(ss_data2);
-	fbp += ss_len2;
 
-	memcpy(fbp,&ss_len3,sizeof(int));
-	fbp += sizeof(int);
-	memcpy(fbp,ss_data3,ss_len3);
-	Z_Free(ss_data3);
-	fbp += ss_len3;
+	for (int i=0;i<num_frames;++i) {
+		memcpy(fbp,frame_ptrs[i],expected_ss_len);
+		free(frame_ptrs[i]);
+		fbp += expected_ss_len;
+	}
 
 	memcpy(fbp, &gs_len, sizeof(int));
 	fbp += sizeof(int);
@@ -585,7 +583,7 @@ done_parsing:
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
 
-	printf("Body size is %d (%d + %d + %d + %d)\n", buflen, ss_len1, ss_len2, ss_len3 ,gs_len);
+	printf("Body size is %d (%d + %d)\n", buflen, num_frames * expected_ss_len ,gs_len);
 
 	xqd_resp_new(&resphandle);
 	xqd_body_new(&respbodyhandle);
@@ -1241,7 +1239,7 @@ D_DoomMain(void)
 	}
 	// TODO - for now we are forcing a SP load
 	startepisode = 1;
-	startmap = 1;
+	startmap = 2;
 	autostart = true;
 
 	p = M_CheckParm("-timer");

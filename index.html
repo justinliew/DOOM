@@ -8,6 +8,7 @@ div {
 }
 </style>
 
+<h2>Currently working on optimizations, so the stability of this may vary.</h2>
 <div>
 W to move forward
 S to move backward
@@ -18,6 +19,8 @@ E to strafe right
 F to fire
 U to use
 </div>
+
+<p id="profiling"></p>
 
 <script>
 var Game = {
@@ -72,7 +75,7 @@ function GeneratePostBody() {
 		return;
 	}
 	var numevents = Object.keys(Game.keys).length;
-	var body = new ArrayBuffer(4 + Game.curState.byteLength + 4 + numevents);
+	var body = new ArrayBuffer(4 + Game.curState.byteLength + 4 + numevents + 4);
 	var view = new DataView(body);
 	view.setUint32(0,Game.curState.byteLength);
 
@@ -88,6 +91,9 @@ function GeneratePostBody() {
 		view.setUint8(base+index,key);
 		index++;
 	}
+//	var num_requested_frames = GetAveragePostTime() / 50;
+	var num_requested_frames = 1; // adaptive frame interpolation isn't helping a lot yet.
+	view.setUint32(base+index,num_requested_frames); 
 
 	return body;
 }
@@ -115,6 +121,7 @@ document.addEventListener('keyup', (event) => {
 }, false);
 
 function RenderFrame(index) {
+	index = 0;
 	const rawcanvas = document.getElementById('framebuffer');
 	rawcanvas.width = 960;
 	rawcanvas.height = 600;
@@ -160,25 +167,19 @@ function GetFrame() {
 			var byteArray = new Uint8Array(arraybuffer);
 			var dv = new DataView(arraybuffer);
 
-			let fb_len1 = dv.getInt32(0,true); // framebuffer length
-			let fb1 = new Uint8Array(arraybuffer.slice(4));
-			Game.frames[0] = fb1;
+			let num_frames = dv.getInt32(0, true); // number of frames
+			let frame_len = 320*200 + 768;
 
-			let fb_len2 = dv.getInt32(4+fb_len1,true); // framebuffer length
-			let fb2 = new Uint8Array(arraybuffer.slice(8+fb_len1));
+			for (i=0;i<num_frames;++i) {
+				let fb = new Uint8Array(arraybuffer.slice(4+i*frame_len));
+				Game.frames[i] = fb;
+			}
 
-			Game.frames[1] = fb2;
-
-			let fb_len3 = dv.getInt32(8+fb_len1+fb_len2,true); // framebuffer length
-			let fb3 = new Uint8Array(arraybuffer.slice(12+fb_len1+fb_len2));
-
-			Game.frames[2] = fb3;
-
-			Game.numframes = 3;
+			Game.numframes = num_frames;
 			Game.frameIndex = 0;
 
-			let gs_len = dv.getInt32(12+fb_len1+fb_len2+fb_len3,true);
-			Game.curState = new Uint8Array(arraybuffer.slice(16+fb_len1+fb_len2+fb_len3));
+			let gs_len = dv.getInt32(4+num_frames*frame_len,true);
+			Game.curState = new Uint8Array(arraybuffer.slice(8+num_frames*frame_len));
 			Game.startpost = true;
 		}
 	};
@@ -197,6 +198,8 @@ function GetFrame() {
 
 	if (Game.numframes > 0) {
 		if (performance.now() - Game.lastRender > GetAveragePostTime() / Game.numframes) {
+			var frametime = performance.now() - Game.lastRender;
+			document.getElementById('profiling').innerHTML = "Frametime: " + frametime;
 			RenderFrame(Game.frameIndex);
 			if (Game.frameIndex < Game.numframes-1)
 				Game.frameIndex++;
