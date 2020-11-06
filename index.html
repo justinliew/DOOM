@@ -8,7 +8,6 @@ div {
 }
 </style>
 
-<h2>Currently working on optimizations, so the stability of this may vary.</h2>
 <div>
 W to move forward
 S to move backward
@@ -198,8 +197,8 @@ function GetFrame() {
 
 	if (Game.numframes > 0) {
 		if (performance.now() - Game.lastRender > GetAveragePostTime() / Game.numframes) {
-			var frametime = performance.now() - Game.lastRender;
-			document.getElementById('profiling').innerHTML = "Frametime: " + frametime;
+			// var frametime = performance.now() - Game.lastRender;
+			// document.getElementById('profiling').innerHTML = "Frametime: " + frametime;
 			RenderFrame(Game.frameIndex);
 			if (Game.frameIndex < Game.numframes-1)
 				Game.frameIndex++;

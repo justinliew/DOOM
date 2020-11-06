@@ -1239,7 +1239,7 @@ D_DoomMain(void)
 	}
 	// TODO - for now we are forcing a SP load
 	startepisode = 1;
-	startmap = 2;
+	startmap = 1;
 	autostart = true;
 
 	p = M_CheckParm("-timer");
