@@ -618,21 +618,39 @@ done_parsing:
 
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 #else
-	for (int i=0;i<10;++i)
+//	for (int i=0;i<10;++i)
+	byte* last_state = NULL;
+	int state_len;
+	int frame = 0;
+	D_OneLoop();
+	D_OneLoop();
+	while(1)
 	{
-		clock_t start = clock();
-		event_t es;
-		es.type = ev_keydown;
-		es.data1 = 68;
-		D_PostEvent(&es);
+		// clock_t start = clock();
+		// event_t es;
+		// es.type = ev_keydown;
+		// es.data1 = 68;
+		// D_PostEvent(&es);
 
 		// event_t ef;
 		// ef.type = ev_keydown;
 		// ef.data1 = 87;
 		// D_PostEvent(&ef);
 
+		if (frame > 0) {
+			G_DoDeserialize(last_state, state_len);
+		}
+		frame++;
+
+		// if (frame == 10) {
+		// 	G_ExitLevel();
+		// }
 
 		D_OneLoop();
+		int out=0;
+		byte* ss = M_InMemoryScreenShot(&out);
+		Z_Free(ss);
+		last_state = G_DoSerialize(&state_len);
 	}
 #endif
 }
