@@ -1110,7 +1110,11 @@ void ST_Drawer (boolean fullscreen, boolean refresh)
 {
   
     st_statusbaron = (!fullscreen) || automapactive;
+#ifdef WASISDK
+	st_firsttime = true;
+#else
     st_firsttime = st_firsttime || refresh;
+#endif
 
     // Do red-/gold-shifts from damage/items
     ST_doPaletteStuff();
