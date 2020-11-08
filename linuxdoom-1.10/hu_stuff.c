@@ -240,16 +240,34 @@ HU_Init(void)
 	}
 }
 
+
 extern byte *save_p;
+char last_player_message[1000];
+boolean pending_init_from_archive = false;
 
 void
 HU_Archive()
 {
+	size_t len = strlen(last_player_message);
+	memcpy(save_p, &len, sizeof(int));
+	save_p += 4;
+	memcpy(save_p, last_player_message, len);
+	save_p += len;
+	memcpy(save_p, &message_counter, sizeof(int));
+	save_p += sizeof(int);
 }
 
 void
 HU_UnArchive()
 {
+	size_t len = 0;
+	memcpy(&len, save_p, sizeof(int));
+	save_p += 4;
+	if (len > 0)
+		memcpy(last_player_message, save_p, len);
+	save_p += len;
+	memcpy(&message_counter, save_p, sizeof(int));
+	save_p += sizeof(int);
 }
 
 void
@@ -340,11 +358,18 @@ HU_Ticker(void)
 
 	int  i, rc;
 	char c;
+	boolean counter_set = false;
+
+	if (strlen(last_player_message) > 0) {
+		plr->message = last_player_message;
+		counter_set = true;
+	}
 
 	// tick down message counter if message is up
 	if (message_counter && !--message_counter) {
 		message_on = false;
 		message_nottobefuckedwith = false;
+		last_player_message[0] = '\0';
 	}
 
 	if (showMessages || message_dontfuckwithme) {
@@ -352,9 +377,11 @@ HU_Ticker(void)
 		// display message if necessary
 		if ((plr->message && !message_nottobefuckedwith) || (plr->message && message_dontfuckwithme)) {
 			HUlib_addMessageToSText(&w_message, 0, plr->message);
+			strcpy(last_player_message, plr->message);
 			plr->message = 0;
 			message_on = true;
-			message_counter = HU_MSGTIMEOUT;
+			if (!counter_set)
+				message_counter = HU_MSGTIMEOUT;
 			message_nottobefuckedwith = message_dontfuckwithme;
 			message_dontfuckwithme = 0;
 		}

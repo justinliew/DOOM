@@ -1290,13 +1290,14 @@ void G_DoDeserialize (byte* data, int length)
     b = *save_p++; 
     c = *save_p++; 
     leveltime = (a<<16) + (b<<8) + c; 
-	 
+
 	clock_t tick = clock();
     // dearchive all the modifications
     P_UnArchivePlayers (); 
     P_UnArchiveWorld (); 
     P_UnArchiveThinkers (); 
     P_UnArchiveSpecials (); 
+	HU_UnArchive();
  
     if (*save_p != 0x1d) 
 	I_Error ("Bad savegame");
@@ -1404,6 +1405,7 @@ byte* G_DoSerialize (int* outlen)
     P_ArchiveWorld (); 
     P_ArchiveThinkers (); 
     P_ArchiveSpecials (); 
+	HU_Archive();
 	 
     *save_p++ = 0x1d;		// consistancy marker 
 	 

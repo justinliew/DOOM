@@ -47,6 +47,9 @@
 // HEADS UP TEXT
 //
 
+void HU_Archive();
+void HU_UnArchive();
+
 void HU_Init(void);
 void HU_Start(void);
 
