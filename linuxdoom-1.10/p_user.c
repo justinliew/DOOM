@@ -157,11 +157,21 @@ void P_MovePlayer (player_t* player)
     //  if not onground.
     onground = (player->mo->z <= player->mo->floorz);
 	
+	// for WASISDK this is a giant hack, but in modifying NetUpdate to allow for quicker updates,
+	// I seem to be calling move more often, so we apply less thrust each time
+	// This needs proper root cause analysis
     if (cmd->forwardmove && onground)
+#ifdef WASISDK
+	P_Thrust (player, player->mo->angle, cmd->forwardmove*1536);
+#else
 	P_Thrust (player, player->mo->angle, cmd->forwardmove*2048);
-    
+#endif    
     if (cmd->sidemove && onground)
+#ifdef WASISDK
+	P_Thrust (player, player->mo->angle-ANG90, cmd->sidemove*1536);
+#else
 	P_Thrust (player, player->mo->angle-ANG90, cmd->sidemove*2048);
+#endif    
 
     if ( (cmd->forwardmove || cmd->sidemove) 
 	 && player->mo->state == &states[S_PLAY] )
