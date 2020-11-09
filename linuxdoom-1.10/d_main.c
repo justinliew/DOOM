@@ -326,7 +326,7 @@ D_Display(void)
 
 	// menus go directly to the screen
 	M_Drawer();  // menu is drawn even on top of everything
-	NetUpdate(); // send out any new accumulation
+	NetUpdate(false); // send out any new accumulation
 
 
 	// normal update
@@ -396,7 +396,7 @@ D_OneLoop(void)
 		clock_t ticsstart = clock();
 		TryRunTics(); // will run at least one tic
 		clock_t ticend = clock();
-		printf("	TryRunTics took  %f\n", 1000.0*(double)(ticend-ticsstart) / CLOCKS_PER_SEC);
+		printf("TryRunTics took  %f\n", 1000.0*(double)(ticend-ticsstart) / CLOCKS_PER_SEC);
 	}
 
 	S_UpdateSounds(players[consoleplayer].mo); // move positional sounds
@@ -405,7 +405,7 @@ D_OneLoop(void)
 	clock_t dispstart = clock();
 	D_Display();
 	clock_t dispend = clock();
-	printf("	D_display took  %f\n", 1000.0*(double)(dispend-dispstart) / CLOCKS_PER_SEC);
+	printf("D_display took  %f\n", 1000.0*(double)(dispend-dispstart) / CLOCKS_PER_SEC);
 
 #ifdef __EMSCRIPTEN__
 	if (SDL_MUSTLOCK(sdl_screen)) SDL_LockSurface(sdl_screen);

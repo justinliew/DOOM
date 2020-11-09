@@ -368,7 +368,7 @@ void GetPackets (void)
 //
 int      gametime;
 
-void NetUpdate (void)
+void NetUpdate (boolean force_new_tic)
 {
     int             nowtime;
     int             newtics;
@@ -379,6 +379,13 @@ void NetUpdate (void)
     // check time
     nowtime = I_GetTime ()/ticdup;
     newtics = nowtime - gametime;
+
+	// force_new_tic is for cases where we may only be running a single state and don't need to wait
+	// between netupdates
+#ifdef WASISDK
+	if (force_new_tic)
+		newtics = 1;
+#endif
     gametime = nowtime;
 	
     if (newtics <= 0) 	// nothing new to update
@@ -661,7 +668,7 @@ void TryRunTics (void)
     oldentertics = entertic;
     
     // get available tics
-    NetUpdate ();
+    NetUpdate (false);
     lowtic = MAXINT;
     numplaying = 0;
     for (i=0 ; i<doomcom->numnodes ; i++)
@@ -724,7 +731,7 @@ void TryRunTics (void)
     // wait for new tics if needed
     while (lowtic < gametic/ticdup + counts)	
     {
-	NetUpdate ();   
+	NetUpdate (true);   
 	lowtic = MAXINT;
 	
 	for (i=0 ; i<doomcom->numnodes ; i++)
@@ -772,7 +779,7 @@ void TryRunTics (void)
 		}
 	    }
 	}
-	NetUpdate ();	// check for new console commands
+	NetUpdate (false);	// check for new console commands
     }
 	if (gametic % 50 == 0) {
 		printf("Ran frame %d\n", gametic);
