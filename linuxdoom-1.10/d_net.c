@@ -493,6 +493,10 @@ void CheckAbort (void)
 //
 void D_ArbitrateNetStart (void)
 {
+// we are multiplayer, but not really, since we aren't sending UDP packets
+#ifdef WASISDK
+	return;
+#endif
     int		i;
     boolean	gotinfo[MAXNETNODES];
 	

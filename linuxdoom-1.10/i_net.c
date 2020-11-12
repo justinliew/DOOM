@@ -297,6 +297,7 @@ void I_InitNetwork (void)
     
     // parse network game options,
     //  -net <consoleplayer> <host> <host> ...
+#ifndef WASISDK
     i = M_CheckParm ("-net");
     if (!i)
     {
@@ -308,15 +309,21 @@ void I_InitNetwork (void)
 	doomcom->consoleplayer = 0;
 	return;
     }
+#endif
 
     netsend = PacketSend;
     netget = PacketGet;
     netgame = true;
 
     // parse player number and host list
+#ifndef WASISDK
     doomcom->consoleplayer = myargv[i+1][0]-'1';
-
     doomcom->numnodes = 1;	// this node for sure
+#else
+	// TODO how to init these for localMP
+	doomcom->consoleplayer = 0;
+	doomcom->numnodes = 1;
+#endif
 	
     i++;
 #ifndef WASISDK

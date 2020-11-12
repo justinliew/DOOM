@@ -1101,6 +1101,10 @@ D_DoomMain(void)
 		deathmatch = 2;
 	else if (M_CheckParm("-deathmatch"))
 		deathmatch = 1;
+// forcing deathmatch on
+#ifdef WASISDK
+	deathmatch = 1;
+#endif
 
 	switch (gamemode) {
 	case retail:
