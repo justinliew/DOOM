@@ -24,7 +24,7 @@ U to use
 <script>
 var Game = {
 	stopMain: {},
-	curState: {},
+	stateId: 0,
 	startpost: true,
 	keys: {},
 	frames: {},
@@ -70,29 +70,23 @@ function GetAveragePostTime() {
 // } ticcmd_t;
 
 function GeneratePostBody() {
-	if (!Game.curState.byteLength) {
+	if (Game.stateId == 0) {
 		return;
 	}
 	var numevents = Object.keys(Game.keys).length;
-	var body = new ArrayBuffer(4 + Game.curState.byteLength + 4 + numevents + 4);
+	var body = new ArrayBuffer(8 + numevents + 4);
 	var view = new DataView(body);
-	view.setUint32(0,Game.curState.byteLength);
+	view.setUint32(0,Game.stateId);
 
-	// I'm sure there's a better way to do this.
-	for (i=0;i<Game.curState.byteLength;++i) {
-		view.setUint8(i+4, Game.curState[i]);
-	}
-
-	view.setUint32(Game.curState.byteLength + 4, numevents);
-	let base = 8 + Game.curState.byteLength;
+	view.setUint32(4, numevents);
 	var index=0;
 	for (var key in Game.keys) {
-		view.setUint8(base+index,key);
+		view.setUint8(8+index,key);
 		index++;
 	}
 //	var num_requested_frames = GetAveragePostTime() / 50;
 	var num_requested_frames = 1; // adaptive frame interpolation isn't helping a lot yet.
-	view.setUint32(base+index,num_requested_frames); 
+	view.setUint32(8+index,num_requested_frames);
 
 	return body;
 }
@@ -177,13 +171,12 @@ function GetFrame() {
 			Game.numframes = num_frames;
 			Game.frameIndex = 0;
 
-			let gs_len = dv.getInt32(4+num_frames*frame_len,true);
-			Game.curState = new Uint8Array(arraybuffer.slice(8+num_frames*frame_len));
+			Game.stateId = dv.getInt32(4+num_frames*frame_len,true);
 			Game.startpost = true;
 		}
 	};
 	// Access-Control-Allow-Origin	
-	xhttp.open("POST", "https://definitely-shining-penguin.edgecompute.app/zipdoomframe", true);
+	xhttp.open("POST", "https://especially-cunning-bat.edgecompute.app/zipdoomframe", true);
 	xhttp.responseType = "arraybuffer";
 	var body = GeneratePostBody();
     xhttp.send(body);
