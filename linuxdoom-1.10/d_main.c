@@ -482,20 +482,20 @@ X_GetStateFromCache(int stateId, int* outlen)
 	res = xqd_body_new(&bodyHandle);
 
 	char uri[256];
-	snprintf(uri, 256, "http://kv-global.vranish.dev/%d", stateId);
+	snprintf(uri, 256, "http://kv.vranish.dev/%d", stateId);
 	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
 	printf("X_GetStateFromCache::xqd_req_uri_set returned %d for %s\n", res, uri);
 
 	ResponseHandle respHandle;
-	res = xqd_req_send(reqHandle, bodyHandle, "kvglobal", strlen("kvglobal"), &respHandle, &respBodyHandle );
+	res = xqd_req_send(reqHandle, bodyHandle, "kvlocal", strlen("kvlocal"), &respHandle, &respBodyHandle );
 
-	byte* buf = Z_Malloc(100000,PU_STATIC,0);
+	byte* buf = Z_Malloc(50000,PU_STATIC,0);
 	int bodyindex=0;
 	int nread;
 	do {
-		int ret = xqd_body_read(respBodyHandle, buf+bodyindex, 100000-bodyindex, &nread);
+		int ret = xqd_body_read(respBodyHandle, buf+bodyindex, 50000-bodyindex, &nread);
 		bodyindex += nread;
-	} while (nread > 0 && bodyindex < 100000);
+	} while (nread > 0 && bodyindex < 50000);
 
 	printf("X_GetStateFromCache read returned %d, nread: %d\n", res, bodyindex);
 
@@ -512,7 +512,7 @@ X_WriteStateToCache(int stateId, byte* state, int len)
 	res = xqd_body_new(&bodyHandle);
 
 	char uri[256];
-	snprintf(uri, 256, "http://kv-global.vranish.dev/%d", stateId);
+	snprintf(uri, 256, "http://kv.vranish.dev/%d", stateId);
 	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
 	printf("X_WriteStateToCache::xqd_req_uri_set returned %d for %s\n", res, uri);
 
@@ -524,7 +524,7 @@ X_WriteStateToCache(int stateId, byte* state, int len)
 
 	ResponseHandle respHandle;
 
-	res = xqd_req_send(reqHandle, bodyHandle, "kvglobal", 8, &respHandle, NULL );
+	res = xqd_req_send(reqHandle, bodyHandle, "kvlocal", strlen("kvlocal"), &respHandle, NULL );
 	printf("X_WriteStateToCache::xqd_req_send returned %d; wrote %d bytes (encoded from %d bytes)\n", res, b64len, len);
 }
 
@@ -538,12 +538,12 @@ X_ProcessIncoming(void)
 	char uribuf[200];
 	size_t nread=0;
 
-	char* bodybuf = Z_Malloc(100000,PU_STATIC,0);
+	char* bodybuf = Z_Malloc(1000,PU_STATIC,0);
 	int bodyindex = 0;
 	do {
-		ret = xqd_body_read(bodyhandle, bodybuf+bodyindex, 100000-bodyindex, &nread);
+		ret = xqd_body_read(bodyhandle, bodybuf+bodyindex, 1000-bodyindex, &nread);
 		bodyindex += nread;
-	} while (nread > 0 && bodyindex < 100000);
+	} while (nread > 0 && bodyindex < 1000);
 
 	int num_frames = 0;
 	// if we have a body, parse it here	
@@ -686,12 +686,18 @@ D_DoomLoop(void)
 	emscripten_request_animation_frame_loop(D_OneLoop, 0);
 #elif defined(XQD)
 
+	clock_t start=clock();
 	int num_frames = X_ProcessIncoming();
+	clock_t end=clock();
+	printf("X_ProcessIncoming took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 
 	// this runs the setup frame
 	D_OneLoop();
 
+	start = clock();
 	X_RunAndSendResponse(num_frames);
+	end = clock();
+	printf("X_RunAndSendResponse took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 #else
 
 //	for (int i=0;i<10;++i)
@@ -1125,6 +1131,7 @@ D_DoomMain(void)
 	}
 	if (!strstr(uribuf, "doomframe")) {
 		printf("Handle root serving\n");
+		clock_t start = clock();
 		// we need to serve the html here
 		ResponseHandle resphandle;
 		BodyHandle respbodyhandle;
@@ -1145,6 +1152,9 @@ D_DoomMain(void)
 		const char* vary_header_value = "Origin";
 		xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
+		clock_t end = clock();
+		printf("Root took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
+		fflush(stdout);
 		int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 		return;
 	}
