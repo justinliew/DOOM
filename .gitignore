@@ -1,1 +1,8 @@
-linuxdoom-1.10/linux/*
+*
+!*/
+!*.*
+linuxdoom-1.10/linux/*.o
+*.dsg
+*.json
+*.png
+.DS_Store
