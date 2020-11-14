@@ -578,8 +578,8 @@ X_ProcessIncoming(void)
 		num_frames = ntohl(num_frames);
 		printf("We are requesting %d frames\n", num_frames);
 	}
-	consoleplayer=playerindex;
-	displayplayer=playerindex;
+	doomcom->numplayers=4;
+	doomcom->consoleplayer=playerindex;
 done_parsing:
 	Z_Free(bodybuf);
 	return num_frames;
@@ -696,6 +696,9 @@ D_DoomLoop(void)
 	int num_frames = X_ProcessIncoming();
 	clock_t end=clock();
 	printf("X_ProcessIncoming took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
+
+	printf("D_CheckNetGame: Checking network game status.\n");
+	D_CheckNetGame();
 
 	// this runs the setup frame
 	D_OneLoop();
@@ -1196,7 +1199,6 @@ D_DoomMain(void)
 // forcing deathmatch on
 #ifdef WASISDK
 	deathmatch = 1;
-	doomcom->numplayers = 4;
 #endif
 
 	switch (gamemode) {
@@ -1400,40 +1402,6 @@ D_DoomMain(void)
 	W_InitMultipleFiles(wadfiles);
 #endif
 
-
-	// Check for -file in shareware
-	if (modifiedgame) {
-		// These are the lumps that will be checked in IWAD,
-		// if any one is not present, execution will be aborted.
-		char name[23][8]
-		    = { "e2m1", "e2m2", "e2m3", "e2m4", "e2m5", "e2m6", "e2m7",   "e2m8",   "e2m9",   "e3m1",   "e3m3",    "e3m3",
-			"e3m4", "e3m5", "e3m6", "e3m7", "e3m8", "e3m9", "dphoof", "bfgga0", "heada1", "cybra1", "spida1d1" };
-		int i;
-
-		if (gamemode == shareware)
-			I_Error("\nYou cannot -file with the shareware "
-				"version. Register!");
-
-		// Check for fake IWAD with right name,
-		// but w/o all the lumps of the registered version.
-		if (gamemode == registered)
-			for (i = 0; i < 23; i++)
-				if (W_CheckNumForName(name[i]) < 0)
-					I_Error("\nThis is not the registered version.");
-	}
-
-	// Iff additonal PWAD files are used, print modified banner
-	if (modifiedgame) {
-		/*m*/ printf("===========================================================================\n"
-			     "ATTENTION:  This version of DOOM has been modified.  If you would like to\n"
-			     "get a copy of the original game, call 1-800-IDGAMES or see the readme file.\n"
-			     "        You will not receive technical support for modified games.\n"
-			     "                      press enter to continue\n"
-			     "===========================================================================\n");
-		getchar();
-	}
-
-
 	// Check and print which version is executed.
 	switch (gamemode) {
 	case shareware:
@@ -1468,8 +1436,6 @@ D_DoomMain(void)
 	printf("I_Init: Setting up machine state.\n");
 	I_Init();
 
-	printf("D_CheckNetGame: Checking network game status.\n");
-	D_CheckNetGame();
 
 	printf("S_Init: Setting up sound.\n");
 	S_Init(snd_SfxVolume /* *8 */, snd_MusicVolume /* *8*/);

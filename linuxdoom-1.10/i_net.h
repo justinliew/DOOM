@@ -33,7 +33,7 @@
 // Called by D_DoomMain.
 
 
-void I_InitNetwork (void);
+void I_InitNetwork (int playerindex);
 void I_NetCmd (void);
 
 

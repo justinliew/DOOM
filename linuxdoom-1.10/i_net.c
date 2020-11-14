@@ -260,7 +260,7 @@ int GetLocalAddress (void)
 //
 // I_InitNetwork
 //
-void I_InitNetwork (void)
+void I_InitNetwork (int playerindex)
 {
     boolean		trueval = true;
     int			i;
@@ -321,8 +321,8 @@ void I_InitNetwork (void)
     doomcom->numnodes = 1;	// this node for sure
 #else
 	// TODO how to init these for localMP
-	doomcom->consoleplayer = 0;
 	doomcom->numnodes = 1;
+	doomcom->consoleplayer = playerindex;
 #endif
 	
     i++;
