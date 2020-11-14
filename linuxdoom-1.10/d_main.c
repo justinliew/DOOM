@@ -470,20 +470,28 @@ void printDiff(const char* type, byte* data, byte* last, int len ) {
 #ifdef XQD
 
 byte*
-X_GetStateFromCache(int stateId, int* outlen)
+X_GetStateFromCache(boolean global, int stateId, int* outlen)
 {
 	RequestHandle reqHandle;
 	BodyHandle bodyHandle, respBodyHandle;
 	int res = xqd_req_new(&reqHandle);
 	res = xqd_body_new(&bodyHandle);
 
+	const char* globaluri = "http://kv-global.vranish.dev/%d";
+	const char* popuri = "http://kv.vranish.dev/%d";
+	const char* uriformat = global ? globaluri : popuri;
+
+	const char* globalname = "kvglobal";
+	const char* popname = "kvlocal";
+	const char* name = global ? globalname : popname;
+
 	char uri[256];
-	snprintf(uri, 256, "http://kv.vranish.dev/%d", stateId);
+	snprintf(uri, 256, uriformat, stateId);
 	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
 	printf("X_GetStateFromCache::xqd_req_uri_set returned %d for %s\n", res, uri);
 
 	ResponseHandle respHandle;
-	res = xqd_req_send(reqHandle, bodyHandle, "kvlocal", strlen("kvlocal"), &respHandle, &respBodyHandle );
+	res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, &respBodyHandle );
 
 	byte* buf = Z_Malloc(50000,PU_STATIC,0);
 	int bodyindex=0;
@@ -500,15 +508,23 @@ X_GetStateFromCache(int stateId, int* outlen)
 }
 
 void
-X_WriteStateToCache(int stateId, byte* state, int len)
+X_WriteStateToCache(boolean global, int stateId, byte* state, int len)
 {
 	RequestHandle reqHandle;
 	BodyHandle bodyHandle;
 	int res = xqd_req_new(&reqHandle);
 	res = xqd_body_new(&bodyHandle);
 
+	const char* globaluri = "http://kv-global.vranish.dev/%d";
+	const char* popuri = "http://kv.vranish.dev/%d";
+	const char* uriformat = global ? globaluri : popuri;
+
+	const char* globalname = "kvglobal";
+	const char* popname = "kvlocal";
+	const char* name = global ? globalname : popname;
+
 	char uri[256];
-	snprintf(uri, 256, "http://kv.vranish.dev/%d", stateId);
+	snprintf(uri, 256, uriformat, stateId);
 	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
 	printf("X_WriteStateToCache::xqd_req_uri_set returned %d for %s\n", res, uri);
 
@@ -520,7 +536,7 @@ X_WriteStateToCache(int stateId, byte* state, int len)
 
 	ResponseHandle respHandle;
 
-	res = xqd_req_send(reqHandle, bodyHandle, "kvlocal", strlen("kvlocal"), &respHandle, NULL );
+	res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, NULL );
 	printf("X_WriteStateToCache::xqd_req_send returned %d; wrote %d bytes (encoded from %d bytes)\n", res, b64len, len);
 }
 
@@ -550,7 +566,7 @@ X_ProcessIncoming(void)
 		stateId = ntohl(stateId);
 
 		int cache_len = 0;
-		byte* cache_data = X_GetStateFromCache(stateId, &cache_len);
+		byte* cache_data = X_GetStateFromCache(false, stateId, &cache_len);
 
 		G_DoDeserialize(cache_data, cache_len);
 //		Z_Free(serialized);
@@ -607,9 +623,6 @@ X_RunAndSendResponse(int num_frames)
 	byte* gs_data = G_DoSerialize(&gs_len);
 	printf("serialize is len %d\n", gs_len);
 
-	int tempstate = 1234;
-	X_WriteStateToCache(tempstate, gs_data, gs_len);
-
 	// framebuffer * num_frames, num_frames, stateid
 	int buflen = expected_ss_len*num_frames + 2*sizeof(int);
 	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0);
@@ -624,6 +637,7 @@ X_RunAndSendResponse(int num_frames)
 		fbp += expected_ss_len;
 	}
 
+	int tempstate = 1234;
 	memcpy(fbp, &tempstate, sizeof(int));
 	fbp += sizeof(int);
 
@@ -664,6 +678,7 @@ X_RunAndSendResponse(int num_frames)
 	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+	X_WriteStateToCache(false, tempstate, gs_data, gs_len);
 }
 #endif
 void
