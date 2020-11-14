@@ -79,6 +79,7 @@ OBJS=				\
 		$(O)/sounds.o			\
 		$(O)/miniz.o			\
 		$(O)/base64.o			\
+		$(O)/x_cache.o			\
 
 all:	 $(O)/linuxxdoom
 

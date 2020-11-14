@@ -1,5 +1,10 @@
 <html>
 
+<div>
+Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" />
+Player Name <input id="player_name" value="Player" />
+</div>
+
 <canvas id="framebuffer"></canvas>
 
 <style>
@@ -18,14 +23,13 @@ E to strafe right
 F to fire
 U to use
 </div>
-Player Number <input type="number" id="player_index" value="0" step="1" min="0" max="3" />
 
 <p id="profiling"></p>
 
 <script>
 var Game = {
 	stopMain: {},
-	stateId: 1234,
+	stateId: -1,
 	startpost: true,
 	keys: {},
 	frames: {},
@@ -71,7 +75,7 @@ function GetAveragePostTime() {
 // } ticcmd_t;
 
 function GeneratePostBody() {
-	if (Game.stateId == 0) {
+	if (Game.stateId == -1) {
 		return;
 	}
 	var numevents = Object.keys(Game.keys).length;
@@ -178,8 +182,7 @@ function GetFrame() {
 			Game.startpost = true;
 		}
 	};
-	// Access-Control-Allow-Origin	
-	xhttp.open("POST", "https://especially-cunning-bat.edgecompute.app/zipdoomframe", true);
+	xhttp.open("POST", "https://especially-cunning-bat.edgecompute.app/doomframe", true);
 	xhttp.responseType = "arraybuffer";
 	var body = GeneratePostBody();
     xhttp.send(body);

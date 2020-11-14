@@ -38,6 +38,10 @@ static const char rcsid[] = "$Id: d_main.c,v 1.8 1997/02/03 22:45:09 b1 Exp $";
 SDL_Surface *sdl_screen;
 #endif
 
+#ifdef XQD
+#include "x_cache.h"
+#endif
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -468,78 +472,6 @@ void printDiff(const char* type, byte* data, byte* last, int len ) {
 }
 
 #ifdef XQD
-
-byte*
-X_GetStateFromCache(boolean global, int stateId, int* outlen)
-{
-	RequestHandle reqHandle;
-	BodyHandle bodyHandle, respBodyHandle;
-	int res = xqd_req_new(&reqHandle);
-	res = xqd_body_new(&bodyHandle);
-
-	const char* globaluri = "http://kv-global.vranish.dev/%d";
-	const char* popuri = "http://kv.vranish.dev/%d";
-	const char* uriformat = global ? globaluri : popuri;
-
-	const char* globalname = "kvglobal";
-	const char* popname = "kvlocal";
-	const char* name = global ? globalname : popname;
-
-	char uri[256];
-	snprintf(uri, 256, uriformat, stateId);
-	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
-	printf("X_GetStateFromCache::xqd_req_uri_set returned %d for %s\n", res, uri);
-
-	ResponseHandle respHandle;
-	res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, &respBodyHandle );
-
-	byte* buf = Z_Malloc(50000,PU_STATIC,0);
-	int bodyindex=0;
-	int nread;
-	do {
-		int ret = xqd_body_read(respBodyHandle, buf+bodyindex, 50000-bodyindex, &nread);
-		bodyindex += nread;
-	} while (nread > 0 && bodyindex < 50000);
-
-	printf("X_GetStateFromCache read returned %d, nread: %d\n", res, bodyindex);
-
-	*outlen = bodyindex;
-	return buf;
-}
-
-void
-X_WriteStateToCache(boolean global, int stateId, byte* state, int len)
-{
-	RequestHandle reqHandle;
-	BodyHandle bodyHandle;
-	int res = xqd_req_new(&reqHandle);
-	res = xqd_body_new(&bodyHandle);
-
-	const char* globaluri = "http://kv-global.vranish.dev/%d";
-	const char* popuri = "http://kv.vranish.dev/%d";
-	const char* uriformat = global ? globaluri : popuri;
-
-	const char* globalname = "kvglobal";
-	const char* popname = "kvlocal";
-	const char* name = global ? globalname : popname;
-
-	char uri[256];
-	snprintf(uri, 256, uriformat, stateId);
-	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
-	printf("X_WriteStateToCache::xqd_req_uri_set returned %d for %s\n", res, uri);
-
-	int b64len;
-	byte* b64state = base64_encode(state, len, &b64len);
-	res = xqd_req_header_append(reqHandle, "do-post-base64", strlen("do-post-base64"), b64state, b64len);
-
-	res = xqd_req_method_set(reqHandle, "POST", strlen("POST"));
-
-	ResponseHandle respHandle;
-
-	res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, NULL );
-	printf("X_WriteStateToCache::xqd_req_send returned %d; wrote %d bytes (encoded from %d bytes)\n", res, b64len, len);
-}
-
 int
 X_ProcessIncoming(void)
 {
@@ -559,8 +491,11 @@ X_ProcessIncoming(void)
 
 	int num_frames = 0;
 	int playerindex=0;
-	// if we have a body, parse it here	
-	if (bodyindex > 0) {
+
+	// no body index means we need to try to join a new session
+	// TODO this should never happen once we implement sessions
+	if (bodyindex == 0) {
+	} else {
 		int stateId = 0;
 		memcpy(&stateId, bodybuf, sizeof(int));
 		stateId = ntohl(stateId);
@@ -569,7 +504,6 @@ X_ProcessIncoming(void)
 		byte* cache_data = X_GetStateFromCache(false, stateId, &cache_len);
 
 		G_DoDeserialize(cache_data, cache_len);
-//		Z_Free(serialized);
 
 		memcpy(&playerindex, &bodybuf[4], sizeof(int));
 		playerindex = ntohl(playerindex);
@@ -651,11 +585,9 @@ X_RunAndSendResponse(int num_frames)
 
 	if (zipped_response) {
 		clock_t zipstart = clock();
-//int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level);
 		byte* dest = Z_Malloc(buflen, PU_STATIC,0);
 		int dest_len = buflen;
 		int ret = mz_compress2(dest, &dest_len, finalbuffer, buflen, MZ_BEST_SPEED);
-//		printf("Compression returned %d; size is %lu\n", ret, dest_len);
 		clock_t zipend = clock();
 		printf("	Compression took %f\n", 1000.0 * (double)(zipend-zipstart) / CLOCKS_PER_SEC);
 		int nwritten=0;
@@ -681,6 +613,7 @@ X_RunAndSendResponse(int num_frames)
 	X_WriteStateToCache(false, tempstate, gs_data, gs_len);
 }
 #endif
+
 void
 D_DoomLoop(void)
 {
@@ -1123,6 +1056,69 @@ FindResponseFile(void)
 		}
 }
 
+#ifdef XQD
+boolean
+X_HandleUrl(const char* uri)
+{
+	if (strstr(uri, "favicon.ico")) {
+		return true;
+	}
+	if (strstr(uri, "sessions")) {
+		// TODO - hit our lobby endpoint to get sessions
+//		const char* sessions_json = X_GetSessions(false);
+
+		RequestHandle reqHandle;
+		BodyHandle bodyHandle, respBodyHandle;
+		int res = xqd_req_new(&reqHandle);
+		res = xqd_body_new(&bodyHandle);
+
+		const char* uri = "https://loudly-verified-elephant.edgecompute.app";
+		const char* name = "lobby";
+
+		res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
+
+		ResponseHandle respHandle;
+		res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, &respBodyHandle );
+
+		byte* buf = (byte*)malloc(1000);
+		int bodyindex=0;
+		int nread;
+		do {
+			int ret = xqd_body_read(respBodyHandle, buf+bodyindex, 1000-bodyindex, &nread);
+			bodyindex += nread;
+		} while (nread > 0 && bodyindex < 1000);
+
+
+		return true;
+	}
+	if (!strstr(uri, "doomframe")) {
+		// we need to serve the html here
+		ResponseHandle resphandle;
+		BodyHandle respbodyhandle;
+
+		xqd_resp_new(&resphandle);
+		xqd_body_new(&respbodyhandle);
+
+		char* data = D_GetIndex();
+
+		int nwritten=0;
+		int ret = xqd_body_write(respbodyhandle, data, strlen(data), BodyWriteEndBack, &nwritten);
+
+		const char* cors_header_name = "Access-Control-Allow-Origin";
+		const char* cors_header_value = "*";
+		xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
+
+		const char* vary_header_name = "Vary";
+		const char* vary_header_value = "Origin";
+		xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
+
+		int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+		return true;
+	}
+	return false;
+}
+#endif
+
 //
 // D_DoomMain
 //
@@ -1141,48 +1137,9 @@ D_DoomMain(void)
 
 	ret = xqd_req_uri_get(reqhandle, uribuf, 200, &nread);
 	printf("Read url, length %zu, %s\n", nread, uribuf);
-	if (strstr(uribuf, "favicon.ico")) {
-		// TODO - what to do here?
+	if (X_HandleUrl(uribuf)) {
 		return;
 	}
-	if (!strstr(uribuf, "doomframe")) {
-		printf("Handle root serving\n");
-		clock_t start = clock();
-		// we need to serve the html here
-		ResponseHandle resphandle;
-		BodyHandle respbodyhandle;
-
-		xqd_resp_new(&resphandle);
-		xqd_body_new(&respbodyhandle);
-
-		char* data = D_GetIndex();
-
-		int nwritten=0;
-		ret = xqd_body_write(respbodyhandle, data, strlen(data), BodyWriteEndBack, &nwritten);
-
-		const char* cors_header_name = "Access-Control-Allow-Origin";
-		const char* cors_header_value = "*";
-		xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
-
-		const char* vary_header_name = "Vary";
-		const char* vary_header_value = "Origin";
-		xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
-
-		clock_t end = clock();
-		printf("Root took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
-		fflush(stdout);
-		int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
-		return;
-	}
-
-	if (strstr(uribuf, "zipdoomframe")) {
-		printf("Zipped response\n");
-		zipped_response = false;
-	} else {
-		printf("Raw response\n");
-		zipped_response = false;
-	}
-
 #endif
 
 	int  p;
