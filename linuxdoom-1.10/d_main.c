@@ -471,6 +471,199 @@ void printDiff(const char* type, byte* data, byte* last, int len ) {
 	printf("%s - avg sum is %f, %f zero\n", type, avg, (float)numzero/(float)len);
 }
 
+#ifdef XQD
+
+byte*
+X_GetStateFromCache(int stateId, int* outlen)
+{
+	RequestHandle reqHandle;
+	BodyHandle bodyHandle, respBodyHandle;
+	int res = xqd_req_new(&reqHandle);
+	res = xqd_body_new(&bodyHandle);
+
+	char uri[256];
+	snprintf(uri, 256, "http://kv.vranish.dev/%d", stateId);
+	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
+	printf("X_GetStateFromCache::xqd_req_uri_set returned %d for %s\n", res, uri);
+
+	ResponseHandle respHandle;
+	res = xqd_req_send(reqHandle, bodyHandle, "kvlocal", strlen("kvlocal"), &respHandle, &respBodyHandle );
+
+	byte* buf = Z_Malloc(50000,PU_STATIC,0);
+	int bodyindex=0;
+	int nread;
+	do {
+		int ret = xqd_body_read(respBodyHandle, buf+bodyindex, 50000-bodyindex, &nread);
+		bodyindex += nread;
+	} while (nread > 0 && bodyindex < 50000);
+
+	printf("X_GetStateFromCache read returned %d, nread: %d\n", res, bodyindex);
+
+	*outlen = bodyindex;
+	return buf;
+}
+
+void
+X_WriteStateToCache(int stateId, byte* state, int len)
+{
+	RequestHandle reqHandle;
+	BodyHandle bodyHandle;
+	int res = xqd_req_new(&reqHandle);
+	res = xqd_body_new(&bodyHandle);
+
+	char uri[256];
+	snprintf(uri, 256, "http://kv.vranish.dev/%d", stateId);
+	res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
+	printf("X_WriteStateToCache::xqd_req_uri_set returned %d for %s\n", res, uri);
+
+	int b64len;
+	byte* b64state = base64_encode(state, len, &b64len);
+	res = xqd_req_header_append(reqHandle, "do-post-base64", strlen("do-post-base64"), b64state, b64len);
+
+	res = xqd_req_method_set(reqHandle, "POST", strlen("POST"));
+
+	ResponseHandle respHandle;
+
+	res = xqd_req_send(reqHandle, bodyHandle, "kvlocal", strlen("kvlocal"), &respHandle, NULL );
+	printf("X_WriteStateToCache::xqd_req_send returned %d; wrote %d bytes (encoded from %d bytes)\n", res, b64len, len);
+}
+
+int
+X_ProcessIncoming(void)
+{
+	RequestHandle reqhandle;
+	BodyHandle bodyhandle;
+	int ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
+
+	char uribuf[200];
+	size_t nread=0;
+
+	char* bodybuf = Z_Malloc(1000,PU_STATIC,0);
+	int bodyindex = 0;
+	do {
+		ret = xqd_body_read(bodyhandle, bodybuf+bodyindex, 1000-bodyindex, &nread);
+		bodyindex += nread;
+	} while (nread > 0 && bodyindex < 1000);
+
+	int num_frames = 0;
+	// if we have a body, parse it here	
+	if (bodyindex > 0) {
+		int stateId = 0;
+		memcpy(&stateId, bodybuf, sizeof(int));
+		stateId = ntohl(stateId);
+
+		int cache_len = 0;
+		byte* cache_data = X_GetStateFromCache(stateId, &cache_len);
+
+		G_DoDeserialize(cache_data, cache_len);
+//		Z_Free(serialized);
+
+		int num_events = 0;
+		memcpy(&num_events, &bodybuf[4], sizeof(int));
+		num_events = ntohl(num_events);
+		printf("We got %d events\n", num_events);
+
+		for (int e=0;e<num_events;++e) {
+			byte event = bodybuf[8+e];
+			event_t es;
+			es.type = ev_keydown;
+			es.data1 = event;
+			D_PostEvent(&es);
+		}
+		memcpy(&num_frames, &bodybuf[8+num_events], sizeof(int));
+		num_frames = ntohl(num_frames);
+		printf("We are requesting %d frames\n", num_frames);
+	}
+done_parsing:
+	Z_Free(bodybuf);
+	return num_frames;
+}
+
+void
+X_RunAndSendResponse(int num_frames)
+{
+	const expected_ss_len = SCREENWIDTH*SCREENHEIGHT+768;
+	if (num_frames > 10 || num_frames < 1) {
+		num_frames = 3;
+	}
+
+	byte* frame_ptrs[10];
+	for (int i=0;i<num_frames;++i) {
+		D_OneLoop();
+
+		// get framebuffer
+		int ss_len;
+		byte* ss = M_InMemoryScreenShot(&ss_len);
+		if (ss_len != expected_ss_len) {
+			I_Error("We got a bad framebuffer of %d bytes\n", ss_len);
+		}
+		frame_ptrs[i] = ss;
+	}
+
+	// get gamestate
+	int gs_len;
+	byte* gs_data = G_DoSerialize(&gs_len);
+	printf("serialize is len %d\n", gs_len);
+
+	int tempstate = 1234;
+	X_WriteStateToCache(tempstate, gs_data, gs_len);
+
+	// framebuffer * num_frames, num_frames, stateid
+	int buflen = expected_ss_len*num_frames + 2*sizeof(int);
+	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0);
+	byte* fbp = finalbuffer;
+
+	memcpy(fbp, &num_frames, sizeof(int));
+	fbp += sizeof(int);
+
+	for (int i=0;i<num_frames;++i) {
+		memcpy(fbp,frame_ptrs[i],expected_ss_len);
+		free(frame_ptrs[i]);
+		fbp += expected_ss_len;
+	}
+
+	memcpy(fbp, &tempstate, sizeof(int));
+	fbp += sizeof(int);
+
+	ResponseHandle resphandle;
+	BodyHandle respbodyhandle;
+
+	printf("Body size is %d\n", buflen);
+
+	xqd_resp_new(&resphandle);
+	xqd_body_new(&respbodyhandle);
+
+	if (zipped_response) {
+		clock_t zipstart = clock();
+//int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level);
+		byte* dest = Z_Malloc(buflen, PU_STATIC,0);
+		int dest_len = buflen;
+		int ret = mz_compress2(dest, &dest_len, finalbuffer, buflen, MZ_BEST_SPEED);
+//		printf("Compression returned %d; size is %lu\n", ret, dest_len);
+		clock_t zipend = clock();
+		printf("	Compression took %f\n", 1000.0 * (double)(zipend-zipstart) / CLOCKS_PER_SEC);
+		int nwritten=0;
+		ret = xqd_body_write(respbodyhandle, dest, dest_len, BodyWriteEndBack, &nwritten);
+
+		const char* deflate_header_name = "Content-Encoding";
+		const char* deflate_header_value = "deflate";
+		xqd_resp_header_append(resphandle, deflate_header_name, strlen(deflate_header_name), deflate_header_value, strlen(deflate_header_value) );
+	} else {
+		int nwritten=0;
+		int ret = xqd_body_write(respbodyhandle, finalbuffer, buflen, BodyWriteEndBack, &nwritten);
+	}
+
+	const char* cors_header_name = "Access-Control-Allow-Origin";
+	const char* cors_header_value = "*";
+	xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
+
+	const char* vary_header_name = "Vary";
+	const char* vary_header_value = "Origin";
+	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
+
+	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+}
+#endif
 void
 D_DoomLoop(void)
 {
@@ -493,131 +686,20 @@ D_DoomLoop(void)
 	emscripten_request_animation_frame_loop(D_OneLoop, 0);
 #elif defined(XQD)
 
-	RequestHandle reqhandle;
-	BodyHandle bodyhandle;
-	int ret = xqd_req_body_downstream_get(&reqhandle, &bodyhandle);
+	clock_t start=clock();
+	int num_frames = X_ProcessIncoming();
+	clock_t end=clock();
+	printf("X_ProcessIncoming took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 
-	char uribuf[200];
-	size_t nread=0;
-
-	char* bodybuf = Z_Malloc(100000,PU_STATIC,0);
-	int bodyindex = 0;
-	do {
-		ret = xqd_body_read(bodyhandle, bodybuf+bodyindex, 100000-bodyindex, &nread);
-		bodyindex += nread;
-	} while (nread > 0 && bodyindex < 100000);
-
-	int num_frames = 0;
-	// if we have a body, parse it here	
-	if (bodyindex > 0) {
-		int state_len = 0;
-		memcpy(&state_len, bodybuf, sizeof(int));
-		state_len = ntohl(state_len);
-
-		byte* serialized = Z_Malloc(state_len, PU_STATIC, 0);
-		memcpy(serialized, &bodybuf[4], state_len);
-
-		G_DoDeserialize(serialized, state_len);
-		Z_Free(serialized);
-
-		int num_events = 0;
-		memcpy(&num_events, &bodybuf[4+state_len], sizeof(int));
-		num_events = ntohl(num_events);
-		printf("We got %d events\n", num_events);
-
-		for (int e=0;e<num_events;++e) {
-			byte event = bodybuf[8+state_len+e];
-			event_t es;
-			es.type = ev_keydown;
-			es.data1 = event;
-			D_PostEvent(&es);
-		}
-		memcpy(&num_frames, &bodybuf[8+state_len+num_events], sizeof(int));
-		num_frames = ntohl(num_frames);
-		printf("We are requesting %d frames\n", num_frames);
-	}
-done_parsing:
-	Z_Free(bodybuf);
-
+	// this runs the setup frame
 	D_OneLoop();
 
-	const expected_ss_len = SCREENWIDTH*SCREENHEIGHT+768;
-	if (num_frames > 10 || num_frames < 1) {
-		num_frames = 3;
-	}
-
-	byte* frame_ptrs[10];
-	for (int i=0;i<num_frames;++i) {
-		D_OneLoop();
-
-		// get framebuffer
-		int ss_len;
-		byte* ss = M_InMemoryScreenShot(&ss_len);
-		if (ss_len != expected_ss_len) {
-			I_Error("We got a bad framebuffer of %d bytes\n", ss_len);
-		}
-		frame_ptrs[i] = ss;
-	}
-
-	// get gamestate
-	int gs_len;
-	byte* gs_data = G_DoSerialize(&gs_len);
-
-	int buflen = expected_ss_len*num_frames + gs_len + 2*sizeof(int);
-	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0);
-	byte* fbp = finalbuffer;
-
-	memcpy(fbp, &num_frames, sizeof(int));
-	fbp += sizeof(int);
-
-	for (int i=0;i<num_frames;++i) {
-		memcpy(fbp,frame_ptrs[i],expected_ss_len);
-		free(frame_ptrs[i]);
-		fbp += expected_ss_len;
-	}
-
-	memcpy(fbp, &gs_len, sizeof(int));
-	fbp += sizeof(int);
-	memcpy(fbp, gs_data,gs_len);
-
-	ResponseHandle resphandle;
-	BodyHandle respbodyhandle;
-
-	printf("Body size is %d (%d + %d)\n", buflen, num_frames * expected_ss_len ,gs_len);
-
-	xqd_resp_new(&resphandle);
-	xqd_body_new(&respbodyhandle);
-
-	if (zipped_response) {
-		clock_t zipstart = clock();
-//int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char *pSource, mz_ulong source_len, int level);
-		byte* dest = Z_Malloc(buflen, PU_STATIC,0);
-		int dest_len = buflen;
-		int ret = mz_compress2(dest, &dest_len, finalbuffer, buflen, MZ_BEST_SPEED);
-//		printf("Compression returned %d; size is %lu\n", ret, dest_len);
-		clock_t zipend = clock();
-		printf("	Compression took %f\n", 1000.0 * (double)(zipend-zipstart) / CLOCKS_PER_SEC);
-		int nwritten=0;
-		ret = xqd_body_write(respbodyhandle, dest, dest_len, BodyWriteEndBack, &nwritten);
-
-		const char* deflate_header_name = "Content-Encoding";
-		const char* deflate_header_value = "deflate";
-		xqd_resp_header_append(resphandle, deflate_header_name, strlen(deflate_header_name), deflate_header_value, strlen(deflate_header_value) );
-	} else {
-		int nwritten=0;
-		ret = xqd_body_write(respbodyhandle, finalbuffer, buflen, BodyWriteEndBack, &nwritten);
-	}
-
-	const char* cors_header_name = "Access-Control-Allow-Origin";
-	const char* cors_header_value = "*";
-	xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
-
-	const char* vary_header_name = "Vary";
-	const char* vary_header_value = "Origin";
-	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
-
-	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+	start = clock();
+	X_RunAndSendResponse(num_frames);
+	end = clock();
+	printf("X_RunAndSendResponse took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 #else
+
 //	for (int i=0;i<10;++i)
 	byte* last_state = NULL;
 	int state_len;
@@ -1049,6 +1131,7 @@ D_DoomMain(void)
 	}
 	if (!strstr(uribuf, "doomframe")) {
 		printf("Handle root serving\n");
+		clock_t start = clock();
 		// we need to serve the html here
 		ResponseHandle resphandle;
 		BodyHandle respbodyhandle;
@@ -1069,6 +1152,9 @@ D_DoomMain(void)
 		const char* vary_header_value = "Origin";
 		xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
+		clock_t end = clock();
+		printf("Root took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
+		fflush(stdout);
 		int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 		return;
 	}
