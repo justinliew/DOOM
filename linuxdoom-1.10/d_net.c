@@ -574,7 +574,7 @@ void D_ArbitrateNetStart (void)
 //
 extern	int			viewangleoffset;
 
-void D_CheckNetGame (void)
+void D_CheckNetGame (int playerindex)
 {
     int             i;
 	
@@ -587,7 +587,7 @@ void D_CheckNetGame (void)
     }
 	
     // I_InitNetwork sets doomcom and netgame
-    I_InitNetwork (doomcom->consoleplayer);
+    I_InitNetwork (playerindex);
     if (doomcom->id != DOOMCOM_ID)
 	I_Error ("Doomcom buffer invalid!");
     

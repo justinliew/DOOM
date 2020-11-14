@@ -78,6 +78,7 @@ OBJS=				\
 		$(O)/info.o				\
 		$(O)/sounds.o			\
 		$(O)/miniz.o			\
+		$(O)/base64.o			\
 
 all:	 $(O)/linuxxdoom
 

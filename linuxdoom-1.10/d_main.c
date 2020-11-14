@@ -143,7 +143,7 @@ char basedefault[1024]; // default file
 
 
 void
-D_CheckNetGame(void);
+D_CheckNetGame(int playerindex);
 void
 D_ProcessEvents(void);
 void
@@ -350,13 +350,9 @@ D_Display(void)
 		} while (!tics);
 		wipestart = nowtime;
 		done = wipe_ScreenWipe(wipe_Melt, 0, 0, SCREENWIDTH, SCREENHEIGHT, tics);
-#ifndef HEADLESS
 		I_UpdateNoBlit();
-#endif
 		M_Drawer(); // menu is drawn even on top of wipes
-#ifndef HEADLESS
 		I_FinishUpdate(); // page flip or blit buffer
-#endif
 	} while (!done);
 #endif
 }
@@ -698,7 +694,7 @@ D_DoomLoop(void)
 	printf("X_ProcessIncoming took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 
 	printf("D_CheckNetGame: Checking network game status.\n");
-	D_CheckNetGame();
+	D_CheckNetGame(doomcom->consoleplayer);
 
 	// this runs the setup frame
 	D_OneLoop();
@@ -709,6 +705,8 @@ D_DoomLoop(void)
 	printf("X_RunAndSendResponse took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 #else
 
+	D_CheckNetGame(0);
+
 //	for (int i=0;i<10;++i)
 	byte* last_state = NULL;
 	int state_len;
@@ -717,30 +715,24 @@ D_DoomLoop(void)
 	D_OneLoop();
 	while(1)
 	{
-		// clock_t start = clock();
-		// event_t es;
-		// es.type = ev_keydown;
-		// es.data1 = 68;
-		// D_PostEvent(&es);
-
-		// event_t ef;
-		// ef.type = ev_keydown;
-		// ef.data1 = 87;
-		// D_PostEvent(&ef);
-
-		if (frame > 0) {
+		if (last_state != NULL) {
 			G_DoDeserialize(last_state, state_len);
-		}
-		frame++;
 
-		// if (frame == 10) {
-		// 	G_ExitLevel();
-		// }
+			if (frame > 3) {
+				consoleplayer=displayplayer=1;
+	 			D_CheckNetGame(1);
+			} else {
+				consoleplayer=displayplayer=0;
+	 			D_CheckNetGame(0);
+			}
+		}
 
 		D_OneLoop();
+		++frame;
 		int out=0;
 		byte* ss = M_InMemoryScreenShot(&out);
 		Z_Free(ss);
+
 		last_state = G_DoSerialize(&state_len);
 	}
 #endif
@@ -1436,6 +1428,10 @@ D_DoomMain(void)
 	printf("I_Init: Setting up machine state.\n");
 	I_Init();
 
+	//gotta leave this here so the HUD renders
+	// for some reason...
+	// we init properly once we have the player index...
+	D_CheckNetGame(0);
 
 	printf("S_Init: Setting up sound.\n");
 	S_Init(snd_SfxVolume /* *8 */, snd_MusicVolume /* *8*/);
