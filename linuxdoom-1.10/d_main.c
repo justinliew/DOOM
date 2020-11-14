@@ -546,6 +546,7 @@ X_ProcessIncoming(void)
 	} while (nread > 0 && bodyindex < 1000);
 
 	int num_frames = 0;
+	int playerindex=0;
 	// if we have a body, parse it here	
 	if (bodyindex > 0) {
 		int stateId = 0;
@@ -558,22 +559,27 @@ X_ProcessIncoming(void)
 		G_DoDeserialize(cache_data, cache_len);
 //		Z_Free(serialized);
 
+		memcpy(&playerindex, &bodybuf[4], sizeof(int));
+		playerindex = ntohl(playerindex);
+
 		int num_events = 0;
-		memcpy(&num_events, &bodybuf[4], sizeof(int));
+		memcpy(&num_events, &bodybuf[8], sizeof(int));
 		num_events = ntohl(num_events);
 		printf("We got %d events\n", num_events);
 
 		for (int e=0;e<num_events;++e) {
-			byte event = bodybuf[8+e];
+			byte event = bodybuf[12+e];
 			event_t es;
 			es.type = ev_keydown;
 			es.data1 = event;
 			D_PostEvent(&es);
 		}
-		memcpy(&num_frames, &bodybuf[8+num_events], sizeof(int));
+		memcpy(&num_frames, &bodybuf[12+num_events], sizeof(int));
 		num_frames = ntohl(num_frames);
 		printf("We are requesting %d frames\n", num_frames);
 	}
+	consoleplayer=playerindex;
+	displayplayer=playerindex;
 done_parsing:
 	Z_Free(bodybuf);
 	return num_frames;
@@ -1190,6 +1196,7 @@ D_DoomMain(void)
 // forcing deathmatch on
 #ifdef WASISDK
 	deathmatch = 1;
+	doomcom->numplayers = 4;
 #endif
 
 	switch (gamemode) {

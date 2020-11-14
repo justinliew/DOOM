@@ -18,6 +18,7 @@ E to strafe right
 F to fire
 U to use
 </div>
+Player Number <input type="number" id="player_index" value="0" step="1" min="0" max="3" />
 
 <p id="profiling"></p>
 
@@ -74,19 +75,21 @@ function GeneratePostBody() {
 		return;
 	}
 	var numevents = Object.keys(Game.keys).length;
-	var body = new ArrayBuffer(8 + numevents + 4);
+	var body = new ArrayBuffer(12 + numevents + 4);
 	var view = new DataView(body);
 	view.setUint32(0,Game.stateId);
 
-	view.setUint32(4, numevents);
+	var player_index = document.getElementById("player_index").value;
+	view.setUint32(4, player_index);
+	view.setUint32(8, numevents);
 	var index=0;
 	for (var key in Game.keys) {
-		view.setUint8(8+index,key);
+		view.setUint8(12+index,key);
 		index++;
 	}
 //	var num_requested_frames = GetAveragePostTime() / 50;
 	var num_requested_frames = 1; // adaptive frame interpolation isn't helping a lot yet.
-	view.setUint32(8+index,num_requested_frames);
+	view.setUint32(12+index,num_requested_frames);
 
 	return body;
 }
