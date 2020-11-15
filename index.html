@@ -3,6 +3,7 @@
 <div>
 Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" />
 Player Name <input id="player_name" value="Player" />
+<p id="sessionid"></p>
 </div>
 
 <canvas id="framebuffer"></canvas>
@@ -29,7 +30,7 @@ U to use
 <script>
 var Game = {
 	stopMain: {},
-	stateId: -1,
+	sessionId: -1,
 	startpost: true,
 	keys: {},
 	frames: {},
@@ -75,13 +76,13 @@ function GetAveragePostTime() {
 // } ticcmd_t;
 
 function GeneratePostBody() {
-	if (Game.stateId == -1) {
+	if (Game.sessionId == -1) {
 		return;
 	}
 	var numevents = Object.keys(Game.keys).length;
 	var body = new ArrayBuffer(12 + numevents + 4);
 	var view = new DataView(body);
-	view.setUint32(0,Game.stateId);
+	view.setUint32(0,Game.sessionId);
 
 	var player_index = document.getElementById("player_index").value;
 	view.setUint32(4, player_index);
@@ -178,7 +179,9 @@ function GetFrame() {
 			Game.numframes = num_frames;
 			Game.frameIndex = 0;
 
-			Game.stateId = dv.getInt32(4+num_frames*frame_len,true);
+			Game.sessionId = dv.getInt32(4+num_frames*frame_len,true);
+			document.getElementById('sessionid').innerHTML = "SessionId: " + Game.sessionId;
+
 			Game.startpost = true;
 		}
 	};
@@ -190,29 +193,41 @@ function GetFrame() {
 
 ;(function () {
 	function main( tFrame ) {
-	Game.stopMain = window.requestAnimationFrame( main );
-	var delta = tFrame-Game.lastTick;
-	Game.lastTick = tFrame;
+		Game.stopMain = window.requestAnimationFrame( main );
+		var delta = tFrame-Game.lastTick;
+		Game.lastTick = tFrame;
 
-	if (Game.numframes > 0) {
-		if (performance.now() - Game.lastRender > GetAveragePostTime() / Game.numframes) {
-			// var frametime = performance.now() - Game.lastRender;
-			// document.getElementById('profiling').innerHTML = "Frametime: " + frametime;
-			RenderFrame(Game.frameIndex);
-			if (Game.frameIndex < Game.numframes-1)
-				Game.frameIndex++;
+		if (Game.numframes > 0) {
+			if (performance.now() - Game.lastRender > GetAveragePostTime() / Game.numframes) {
+				// var frametime = performance.now() - Game.lastRender;
+				// document.getElementById('profiling').innerHTML = "Frametime: " + frametime;
+				RenderFrame(Game.frameIndex);
+				if (Game.frameIndex < Game.numframes-1)
+					Game.frameIndex++;
+			}
+		}
+
+		if (Game.startpost)
+		{
+			GetFrame();
+			Game.startpost = false;
 		}
 	}
 
-	if (Game.startpost)
-	{
-		GetFrame();
-		Game.startpost = false;
+	function join_session() {
+		var xhttp = new XMLHttpRequest();
+		xhttp.onload = function(oEvent) {
+			Game.sessionId = xhttp.response;
+			Game.lastTick = performance.now();
+			main(performance.now());
+		};
+		xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_best_session", true);
+		xhttp.responseType = "text";
+		xhttp.setRequestHeader("name",document.getElementById("player_name").value);
+		xhttp.send();
 	}
-}
 
-	Game.lastTick = performance.now();
-	main(performance.now());
+	join_session();
 })();
 </script>
 </html>

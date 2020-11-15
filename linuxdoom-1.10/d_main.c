@@ -472,6 +472,7 @@ void printDiff(const char* type, byte* data, byte* last, int len ) {
 }
 
 #ifdef XQD
+int sessionid=0;
 int
 X_ProcessIncoming(void)
 {
@@ -496,12 +497,11 @@ X_ProcessIncoming(void)
 	// TODO this should never happen once we implement sessions
 	if (bodyindex == 0) {
 	} else {
-		int stateId = 0;
-		memcpy(&stateId, bodybuf, sizeof(int));
-		stateId = ntohl(stateId);
+		memcpy(&sessionid, bodybuf, sizeof(int));
+		sessionid = ntohl(sessionid);
 
 		int cache_len = 0;
-		byte* cache_data = X_GetStateFromCache(false, stateId, &cache_len);
+		byte* cache_data = X_GetStateFromCache(false, sessionid, &cache_len);
 
 		G_DoDeserialize(cache_data, cache_len);
 
@@ -571,8 +571,7 @@ X_RunAndSendResponse(int num_frames)
 		fbp += expected_ss_len;
 	}
 
-	int tempstate = 1234;
-	memcpy(fbp, &tempstate, sizeof(int));
+	memcpy(fbp, &sessionid, sizeof(int));
 	fbp += sizeof(int);
 
 	ResponseHandle resphandle;
@@ -610,7 +609,7 @@ X_RunAndSendResponse(int num_frames)
 	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
-	X_WriteStateToCache(false, tempstate, gs_data, gs_len);
+	X_WriteStateToCache(false, sessionid, gs_data, gs_len);
 }
 #endif
 
