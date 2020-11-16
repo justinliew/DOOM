@@ -473,6 +473,7 @@ void printDiff(const char* type, byte* data, byte* last, int len ) {
 
 #ifdef XQD
 int sessionid=0;
+bool global=false;
 int
 X_ProcessIncoming(void)
 {
@@ -500,27 +501,29 @@ X_ProcessIncoming(void)
 		memcpy(&sessionid, bodybuf, sizeof(int));
 		sessionid = ntohl(sessionid);
 
+		memcpy(&global, &bodybuf[4], 1);
+
 		int cache_len = 0;
-		byte* cache_data = X_GetStateFromCache(true, sessionid, &cache_len);
+		byte* cache_data = X_GetStateFromCache(global, sessionid, &cache_len);
 
 		G_DoDeserialize(cache_data, cache_len);
 
-		memcpy(&playerindex, &bodybuf[4], sizeof(int));
+		memcpy(&playerindex, &bodybuf[5], sizeof(int));
 		playerindex = ntohl(playerindex);
 
 		int num_events = 0;
-		memcpy(&num_events, &bodybuf[8], sizeof(int));
+		memcpy(&num_events, &bodybuf[9], sizeof(int));
 		num_events = ntohl(num_events);
 		printf("We got %d events\n", num_events);
 
 		for (int e=0;e<num_events;++e) {
-			byte event = bodybuf[12+e];
+			byte event = bodybuf[13+e];
 			event_t es;
 			es.type = ev_keydown;
 			es.data1 = event;
 			D_PostEvent(&es);
 		}
-		memcpy(&num_frames, &bodybuf[12+num_events], sizeof(int));
+		memcpy(&num_frames, &bodybuf[13+num_events], sizeof(int));
 		num_frames = ntohl(num_frames);
 		printf("We are requesting %d frames\n", num_frames);
 	}
@@ -609,7 +612,7 @@ X_RunAndSendResponse(int num_frames)
 	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
-	X_WriteStateToCache(true, sessionid, gs_data, gs_len);
+	X_WriteStateToCache(global, sessionid, gs_data, gs_len);
 }
 #endif
 
@@ -642,6 +645,11 @@ D_DoomLoop(void)
 
 	printf("D_CheckNetGame: Checking network game status.\n");
 	D_CheckNetGame(doomcom->consoleplayer);
+
+	// we need to do this here so we get the hud for the proper player
+	ST_Start ();
+	// wake up the heads up text
+	HU_Start ();
 
 	// this runs the setup frame
 	D_OneLoop();

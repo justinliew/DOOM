@@ -33,7 +33,7 @@ X_GetStateFromCache(boolean global, int stateId, int* outlen)
 	res = xqd_body_new(&bodyHandle);
 	char stateString[256];
 	snprintf(stateString, 256, "%d", stateId);
-	printf("X_GetStateFromCache with %d becomes %s\n", stateId, stateString);
+	printf("X_GetStateFromCache with session %d\n", stateId);
 	X_ReqUriSet(global, reqHandle, stateString);
 	const char* name = X_GetUriName(global);
 

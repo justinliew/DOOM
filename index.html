@@ -31,6 +31,7 @@ U to use (and respawn)
 var Game = {
 	stopMain: {},
 	sessionId: -1,
+	globalpop: false,
 	startpost: true,
 	keys: {},
 	frames: {},
@@ -76,25 +77,23 @@ function GetAveragePostTime() {
 // } ticcmd_t;
 
 function GeneratePostBody() {
-	if (Game.sessionId == -1) {
-		return;
-	}
 	var numevents = Object.keys(Game.keys).length;
-	var body = new ArrayBuffer(12 + numevents + 4);
+	var body = new ArrayBuffer(13 + numevents + 4);
 	var view = new DataView(body);
 	view.setUint32(0,Game.sessionId);
+	view.setUint8(4,Game.globalpop);
 
 	var player_index = document.getElementById("player_index").value;
-	view.setUint32(4, player_index);
-	view.setUint32(8, numevents);
+	view.setUint32(5, player_index);
+	view.setUint32(9, numevents);
 	var index=0;
 	for (var key in Game.keys) {
-		view.setUint8(12+index,key);
+		view.setUint8(13+index,key);
 		index++;
 	}
 //	var num_requested_frames = GetAveragePostTime() / 50;
 	var num_requested_frames = 1; // adaptive frame interpolation isn't helping a lot yet.
-	view.setUint32(12+index,num_requested_frames);
+	view.setUint32(13+index,num_requested_frames);
 
 	return body;
 }
