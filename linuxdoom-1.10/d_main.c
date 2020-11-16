@@ -501,7 +501,7 @@ X_ProcessIncoming(void)
 		sessionid = ntohl(sessionid);
 
 		int cache_len = 0;
-		byte* cache_data = X_GetStateFromCache(false, sessionid, &cache_len);
+		byte* cache_data = X_GetStateFromCache(true, sessionid, &cache_len);
 
 		G_DoDeserialize(cache_data, cache_len);
 
@@ -609,7 +609,7 @@ X_RunAndSendResponse(int num_frames)
 	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
-	X_WriteStateToCache(false, sessionid, gs_data, gs_len);
+	X_WriteStateToCache(true, sessionid, gs_data, gs_len);
 }
 #endif
 
