@@ -36,7 +36,6 @@ var Game = {
 	keys: {},
 	frames: {},
 	numframes: 0,
-	frameIndex: 0,
 	lastTick: 0,
 	lastRender: 0,
 
@@ -120,8 +119,7 @@ document.addEventListener('keyup', (event) => {
 	delete Game.keys[event.keyCode];
 }, false);
 
-function RenderFrame(index) {
-	index = 0;
+function RenderFrame() {
 	const rawcanvas = document.getElementById('framebuffer');
 	rawcanvas.width = 960;
 	rawcanvas.height = 600;
@@ -132,14 +130,14 @@ function RenderFrame(index) {
 
 	var palette = new Uint8ClampedArray(256*3);
 	for (var i = 0; i < 256 * 3; ++i) {
-		palette[i] = Game.frames[index][i];
+		palette[i] = Game.frames[0][i];
 	}
 	//for (var i = 256*3; i < fb.length; i += 4) {
 	fb_index = 256*3;
 	for (var i = 0; i < data.length; i += 4) {
-		data[i] = palette[Game.frames[index][fb_index]*3];
-		data[i+1] = palette[Game.frames[index][fb_index]*3+1];
-		data[i+2] = palette[Game.frames[index][fb_index]*3+2];
+		data[i] = palette[Game.frames[0][fb_index]*3];
+		data[i+1] = palette[Game.frames[0][fb_index]*3+1];
+		data[i+2] = palette[Game.frames[0][fb_index]*3+2];
 		data[i+3] = 255;
 		fb_index++;
 	}
@@ -176,7 +174,6 @@ function GetFrame() {
 			}
 
 			Game.numframes = num_frames;
-			Game.frameIndex = 0;
 
 			Game.sessionId = dv.getInt32(4+num_frames*frame_len,true);
 			document.getElementById('sessionid').innerHTML = "SessionId: " + Game.sessionId;
@@ -196,15 +193,8 @@ function GetFrame() {
 		var delta = tFrame-Game.lastTick;
 		Game.lastTick = tFrame;
 
-		if (Game.numframes > 0) {
-			if (performance.now() - Game.lastRender > GetAveragePostTime() / Game.numframes) {
-				// var frametime = performance.now() - Game.lastRender;
-				// document.getElementById('profiling').innerHTML = "Frametime: " + frametime;
-				RenderFrame(Game.frameIndex);
-				if (Game.frameIndex < Game.numframes-1)
-					Game.frameIndex++;
-			}
-		}
+		if (Game.numframes > 0)
+			RenderFrame();
 
 		if (Game.startpost)
 		{
