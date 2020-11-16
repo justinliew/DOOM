@@ -2,7 +2,7 @@
 
 <div>
 Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" />
-Player Name <input id="player_name" value="Player" />
+Player Name <input id="player_name" value="" />
 <p id="sessionid"></p>
 </div>
 
@@ -22,7 +22,7 @@ D to turn right
 Q to strafe left
 E to strafe right
 F to fire
-U to use
+U to use (and respawn)
 </div>
 
 <p id="profiling"></p>
@@ -214,19 +214,69 @@ function GetFrame() {
 		}
 	}
 
+	function get_value_from_cookie(key) {
+		var value;
+		var row = document.cookie
+			.split('; ')
+			.find(row => row.startsWith(key));
+			if (typeof row != "undefined") {
+				value = row.split('=')[1];
+			} else {
+				value = "";
+			}
+		return value;
+	}
+
+	function update_name_in_session()
+	{
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/update_name_in_session", true);
+		xhttp.setRequestHeader("sessionid",Game.sessionId);
+		xhttp.setRequestHeader("playerid",get_value_from_cookie('playerid'));
+		xhttp.setRequestHeader("name",document.getElementById("player_name").value);
+		xhttp.send();
+	}
+
+	function init_user() {
+		var playerid=get_value_from_cookie('playerid');
+		var playername = get_value_from_cookie('playername');
+
+		if (playerid == 0) {
+			playerid = Math.floor(Math.random() * 100000);
+			document.cookie = "playerid="+playerid;
+			playername="Player" + playerid;
+			document.cookie = "playername="+playername;
+		}
+		if (playername == "") {
+			playername="Player" + playerid;
+			document.cookie = "playername="+playername;
+		}
+		document.getElementById("player_name").value = playername;
+
+		document.getElementById("player_name").onchange = function() {
+		document.cookie = "playername="+document.getElementById("player_name").value;
+		update_name_in_session();
+		}
+	}
+
 	function join_session() {
 		var xhttp = new XMLHttpRequest();
 		xhttp.onload = function(oEvent) {
-			Game.sessionId = xhttp.response;
+			var parts = xhttp.response.split(',');
+			Game.sessionId = parts[0];
+			document.getElementById('player_index').value = parts[1];
+			Game.playerIndex = parts[1];
 			Game.lastTick = performance.now();
 			main(performance.now());
 		};
 		xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_best_session", true);
 		xhttp.responseType = "text";
+		xhttp.setRequestHeader("id",get_value_from_cookie('playerid'));
 		xhttp.setRequestHeader("name",document.getElementById("player_name").value);
 		xhttp.send();
 	}
 
+	init_user();
 	join_session();
 })();
 </script>
