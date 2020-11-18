@@ -473,7 +473,7 @@ void printDiff(const char* type, byte* data, byte* last, int len ) {
 
 #ifdef XQD
 int sessionid=0;
-bool global=false;
+int  migration=0;
 int
 X_ProcessIncoming(void)
 {
@@ -497,10 +497,16 @@ X_ProcessIncoming(void)
 	memcpy(&sessionid, bodybuf, sizeof(int));
 	sessionid = ntohl(sessionid);
 
-	memcpy(&global, &bodybuf[4], 1);
+	memcpy(&migration, &bodybuf[4], 1);
+
+	bool global_read = false;
+	if (migration == 2) {
+		global_read = true;
+	}
 
 	int cache_len = 0;
-	byte* cache_data = X_GetStateFromCache(global, sessionid, &cache_len);
+	byte* cache_data = X_GetStateFromCache(global_read, sessionid, &cache_len);
+	printf("X_GetStateFromCache migration: %d\n", migration);
 
 	G_DoDeserialize(cache_data, cache_len);
 
@@ -623,7 +629,12 @@ X_RunAndSendResponse(int num_frames)
 	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
 	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
-	X_WriteStateToCache(global, sessionid, gs_data, gs_len);
+	bool global_write = false;
+	if (migration == 1) {
+		global_write = true;
+	}
+	X_WriteStateToCache(global_write, sessionid, gs_data, gs_len);
+	printf("X_WriteStateToCache migration: %d\n", migration);
 }
 #endif
 

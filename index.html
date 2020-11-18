@@ -1,9 +1,10 @@
 <html>
 
 <div>
-DOOM@EDGE
+DOOM@EDGE <span id="popdisplay"></span>
 
 Player Name <input id="player_name" value="" />
+DEBUG Change Pop <input id="pop_override" value="" />
 <button onClick="showControlsOverlay();">Show Controls</button>
 </div>
 <!--Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" /> -->
@@ -114,9 +115,10 @@ var Game = {
 	sessionId: -1,
 	playerId: -1,
 	playerIndex: 0,
-	globalpop: false,
 	pop: "",
 	host: "",
+	migration: 0,
+	migrated_pop: "",
 	startpost: true,
 	keys: {},
 	frames: {},
@@ -163,7 +165,16 @@ function GeneratePostBody() {
 	var body = new ArrayBuffer(13 + numevents + 4);
 	var view = new DataView(body);
 	view.setUint32(0,Game.sessionId);
-	view.setUint8(4,Game.globalpop);
+
+	if (Game.migration == 1) {
+		view.setUint8(4,1); // 1 means read from local, write to global
+
+	} else if (Game.migration == 2) {
+		view.setUint8(4,2); // 2 means read from global, write to local
+		Game.migration = 0;
+	} else {
+		view.setUint8(4,0); // local for both read/write
+	}
 
 	view.setUint32(5, Game.playerIndex);
 	view.setUint32(9, numevents);
@@ -268,8 +279,9 @@ function GetFrame() {
 			var poplen = dv.getInt32(8+num_frames*frame_len,true);
 			var poparray = new Uint8Array(arraybuffer.slice(12+num_frames*frame_len,12+num_frames*frame_len+poplen));
 			var pop = new TextDecoder("utf-8").decode(poparray);
-			if (Game.pop != pop && Game.playerIndex == 0) {
+			if (Game.pop != pop && Game.playerIndex == 0 && Game.migration == 0) {
 				Game.pop = pop;
+				document.getElementById('popdisplay').innerHTML = "running on " + Game.pop;
 				var pop_update = new XMLHttpRequest();
 				pop_update.onload = function(oEvent) {
 					refresh_sessions();
@@ -290,8 +302,15 @@ function GetFrame() {
 	xhttp.open("POST", get_frame_url(), true);
 	xhttp.responseType = "arraybuffer";
 	var body = GeneratePostBody();
-	xhttp.setRequestHeader("doomgame", "1");
+	if (Game.pop != "") {
+		xhttp.setRequestHeader("doomgame", "1");
+	}
     xhttp.send(body);
+	if (Game.migration == 1) {
+		Game.migration = 2;
+		Game.pop = Game.migrated_pop;
+		Game.migrated_pop = "";
+	}
 }
 
 function refresh_sessions() {
@@ -401,7 +420,6 @@ function join_session(id) {
 		heartbeat_req.setRequestHeader("sessionid",Game.sessionId);
 		heartbeat_req.setRequestHeader("playerid",Game.playerId);
 		heartbeat_req.send();
-		refresh_sessions();
 	}
 
 	function init_user() {
@@ -425,6 +443,13 @@ function join_session(id) {
 			document.cookie = "playername="+document.getElementById("player_name").value;
 			update_name_in_session();
 		}
+
+		document.getElementById('pop_override').onchange = function() {
+			Game.migration = 1;
+			Game.migrated_pop = document.getElementById('pop_override').value;
+		}
+
+		setInterval(refresh_sessions, 1000 * 30); // 3s interval
 		setInterval(lobby_heartbeat, 1000 * 30); // 30s interval
 	}
 

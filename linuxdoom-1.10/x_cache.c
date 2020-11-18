@@ -76,7 +76,7 @@ X_WriteStateToCache(boolean global, int stateId, byte* state, int len)
 	ResponseHandle respHandle;
 
 	res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, NULL );
-	printf("X_WriteStateToCache::xqd_req_send returned %d; wrote %d bytes (encoded from %d bytes)\n", res, b64len, len);
+	printf("X_WriteStateToCache::xqd_req_send returned %d; wrote %d bytes (encoded from %d bytes) for %s\n", res, b64len, len, name);
 }
 
 /*
