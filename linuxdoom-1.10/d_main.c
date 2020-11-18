@@ -1092,32 +1092,22 @@ X_HandleUrl(const char* uri)
 	if (strstr(uri, "favicon.ico")) {
 		return true;
 	}
-	if (strstr(uri, "sessions")) {
-		// TODO - hit our lobby endpoint to get sessions
-//		const char* sessions_json = X_GetSessions(false);
+	if (strstr(uri, "ping")) {
+		ResponseHandle resphandle;
+		BodyHandle respbodyhandle;
 
-		RequestHandle reqHandle;
-		BodyHandle bodyHandle, respBodyHandle;
-		int res = xqd_req_new(&reqHandle);
-		res = xqd_body_new(&bodyHandle);
+		xqd_resp_new(&resphandle);
+		xqd_body_new(&respbodyhandle);
 
-		const char* uri = "https://loudly-verified-elephant.edgecompute.app";
-		const char* name = "lobby";
+		const char* cors_header_name = "Access-Control-Allow-Origin";
+		const char* cors_header_value = "*";
+		xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
 
-		res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
+		const char* vary_header_name = "Vary";
+		const char* vary_header_value = "Origin";
+		xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
-		ResponseHandle respHandle;
-		res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, &respBodyHandle );
-
-		byte* buf = (byte*)malloc(1000);
-		int bodyindex=0;
-		int nread;
-		do {
-			int ret = xqd_body_read(respBodyHandle, buf+bodyindex, 1000-bodyindex, &nread);
-			bodyindex += nread;
-		} while (nread > 0 && bodyindex < 1000);
-
-
+		xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 		return true;
 	}
 	if (!strstr(uri, "doomframe")) {
