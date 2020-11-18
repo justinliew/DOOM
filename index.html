@@ -1,37 +1,122 @@
 <html>
 
 <div>
-Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" />
+DOOM@EDGE
+
 Player Name <input id="player_name" value="" />
-<p id="sessionid"></p>
+<button onClick="showControlsOverlay();">Show Controls</button>
 </div>
+<!--Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" /> -->
+
+<!--
+	Key bindings
+    {"key_right",&key_right, 'D'},
+    {"key_left",&key_left, 'A'},
+    {"key_up",&key_up, 'W'},
+    {"key_down",&key_down, 'S'},
+    {"key_strafeleft",&key_strafeleft, 'Q'},
+    {"key_straferight",&key_straferight, 'E'},
+
+    {"key_fire",&key_fire, 'F'},
+    {"key_use",&key_use, 'U'},
+    {"key_strafe",&key_strafe, KEY_RALT},
+    {"key_speed",&key_speed, KEY_RSHIFT},
+-->
+
+<div id="overlay" onclick="removeControlsOverlay()">
+	<div id="text">
+		W to move forward
+		S to move backward
+		A to turn left
+		D to turn right
+		Q to strafe left
+		E to strafe right
+		F to fire
+		U to use (and respawn)
+	</div>
+  </div>
 
 <canvas id="framebuffer"></canvas>
+
+<div>
+<table id="sessions_table"></table>
+</div>
 
 <style>
 div {
     white-space: pre-wrap;
 }
+
+table {
+  table-layout: fixed;
+  width: 40%;
+  border-collapse: collapse;
+  border: 2px solid purple;
+}
+
+thead th:nth-child(1) {
+  width: 10%;
+}
+
+thead th:nth-child(2) {
+  width: 70%;
+}
+
+thead th:nth-child(3) {
+  width: 20%;
+}
+
+th, td {
+  padding: 5px;
+}
+
+tbody td {
+  text-align: center;
+}
+
+thead td {
+	text-align: center;
+}
+
+table td, table th {
+	white-space: pre-wrap;
+	border: 1px solid black;
+}
+
+#overlay {
+  position: fixed;
+  display: none;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 2;
+  cursor: pointer;
+}
+
+#text{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 20px;
+  color: white;
+  transform: translate(-50%,-50%);
+  -ms-transform: translate(-50%,-50%);
+}
 </style>
-
-<div>
-W to move forward
-S to move backward
-A to turn left
-D to turn right
-Q to strafe left
-E to strafe right
-F to fire
-U to use (and respawn)
-</div>
-
-<p id="profiling"></p>
 
 <script>
 var Game = {
 	stopMain: {},
 	sessionId: -1,
+	playerId: -1,
+	playerIndex: 0,
 	globalpop: false,
+	pop: "",
+	host: "",
 	startpost: true,
 	keys: {},
 	frames: {},
@@ -45,6 +130,14 @@ var Game = {
 	postindex: 0,
 	postfull: false,
 };
+
+function removeControlsOverlay() {
+	document.getElementById("overlay").style.display = "none";
+};
+
+function showControlsOverlay() {
+	document.getElementById("overlay").style.display = "block";
+}
 
 function AddPostTime(time) {
 	if (!Game.postfull) {
@@ -65,16 +158,6 @@ function GetAveragePostTime() {
 	return total / Game.numposttimes;
 }
 
-// typedef struct
-// {
-//     char	forwardmove;	// *2048 for move
-//     char	sidemove;	// *2048 for move
-//     short	angleturn;	// <<16 for angle delta
-//     short	consistancy;	// checks for net game
-//     byte	chatchar;
-//     byte	buttons;
-// } ticcmd_t;
-
 function GeneratePostBody() {
 	var numevents = Object.keys(Game.keys).length;
 	var body = new ArrayBuffer(13 + numevents + 4);
@@ -82,15 +165,13 @@ function GeneratePostBody() {
 	view.setUint32(0,Game.sessionId);
 	view.setUint8(4,Game.globalpop);
 
-	var player_index = document.getElementById("player_index").value;
-	view.setUint32(5, player_index);
+	view.setUint32(5, Game.playerIndex);
 	view.setUint32(9, numevents);
 	var index=0;
 	for (var key in Game.keys) {
 		view.setUint8(13+index,key);
 		index++;
 	}
-//	var num_requested_frames = GetAveragePostTime() / 50;
 	var num_requested_frames = 1; // adaptive frame interpolation isn't helping a lot yet.
 	view.setUint32(13+index,num_requested_frames);
 
@@ -176,7 +257,26 @@ function GetFrame() {
 			Game.numframes = num_frames;
 
 			Game.sessionId = dv.getInt32(4+num_frames*frame_len,true);
-			document.getElementById('sessionid').innerHTML = "SessionId: " + Game.sessionId;
+
+			var poplen = dv.getInt32(8+num_frames*frame_len,true);
+			var poparray = new Uint8Array(arraybuffer.slice(12+num_frames*frame_len,12+num_frames*frame_len+poplen));
+			var pop = new TextDecoder("utf-8").decode(poparray);
+			if (Game.pop != pop) {
+				Game.pop = pop;
+				var pop_update = new XMLHttpRequest();
+				pop_update.onload = function(oEvent) {
+					refresh_sessions();
+				}
+				pop_update.open("POST", "https://loudly-verified-elephant.edgecompute.app/update_pop_in_session", true);
+				pop_update.setRequestHeader("playerid",Game.playerId);
+				pop_update.setRequestHeader("sessionid",Game.sessionId);
+				pop_update.setRequestHeader("pop",Game.pop);
+				pop_update.send();
+			}
+
+			var hostlen = dv.getInt32(12+num_frames*frame_len + poplen,true);
+			var hostarray = new Uint8Array(arraybuffer.slice(16+num_frames*frame_len + poplen,16+num_frames*frame_len + poplen + hostlen));
+			Game.host = new TextDecoder("utf-8").decode(hostarray);
 
 			Game.startpost = true;
 		}
@@ -186,6 +286,67 @@ function GetFrame() {
 	var body = GeneratePostBody();
     xhttp.send(body);
 }
+
+function refresh_sessions() {
+	var session_req = new XMLHttpRequest();
+	session_req.onload = function(oEvent) {
+		var sessions = JSON.parse(session_req.response);
+		var table = document.getElementById("sessions_table");
+
+		var head = table.createTHead();
+		let row = head.insertRow();
+		let th = document.createElement("th");
+		let text = document.createTextNode("ID");
+		th.appendChild(text);
+		row.appendChild(th);
+		th = document.createElement("th");
+		text = document.createTextNode("Players");
+		th.appendChild(text);
+		row.appendChild(th);
+		th = document.createElement("th");
+		text = document.createTextNode("Join");
+		th.appendChild(text);
+		row.appendChild(th);
+
+	for(var i = table.rows.length; i > 1;i--)
+		{
+			document.getElementById("sessions_table").deleteRow(i -1);
+		}
+		sessions.forEach(session => {
+			var row = table.insertRow(-1);
+			var idcell = row.insertCell(0);
+			var playercell = row.insertCell(1);
+			var buttoncell = row.insertCell(2);
+			idcell.innerHTML = session.id;
+			session.players.forEach(player => {
+				if (player.id == Game.playerId) {
+					playercell.innerHTML += "<b>" + player.name + " (me)</b>";
+				} else {
+					playercell.innerHTML += player.name;
+				}
+				if (Game.pop != "") {
+					playercell.innerHTML += " (" + Game.pop + ")\n";
+				} else {
+					playercell.innerHTML += "\n";
+				}
+			});
+			buttoncell.innerHTML = "<button id="+session.id+" onClick=join_session(this.id);>Join</button>"
+		});
+	}
+
+	session_req.open("GET", "https://loudly-verified-elephant.edgecompute.app/sessions", true);
+	session_req.send();
+}
+
+function join_session(id) {
+	xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_session", true);
+		xhttp.responseType = "text";
+		xhttp.setRequestHeader("playerid",Game.playerId);
+		xhttp.setRequestHeader("name",document.getElementById("player_name").value);
+		xhttp.setRequestHeader("sessionid",id);
+		xhttp.send();
+}
+
 
 ;(function () {
 	function main( tFrame ) {
@@ -221,17 +382,19 @@ function GetFrame() {
 		var xhttp = new XMLHttpRequest();
 		xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/update_name_in_session", true);
 		xhttp.setRequestHeader("sessionid",Game.sessionId);
-		xhttp.setRequestHeader("playerid",get_value_from_cookie('playerid'));
+		xhttp.setRequestHeader("playerid",Game.playerId);
 		xhttp.setRequestHeader("name",document.getElementById("player_name").value);
 		xhttp.send();
 	}
 
 	function lobby_heartbeat() {
-		var xhttp = new XMLHttpRequest();
-		xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/heartbeat", true);
-		xhttp.setRequestHeader("sessionid",Game.sessionId);
-		xhttp.setRequestHeader("playerid",get_value_from_cookie('playerid'));
-		xhttp.send();
+		var heartbeat_req = new XMLHttpRequest();
+		heartbeat_req.open("POST", "https://loudly-verified-elephant.edgecompute.app/heartbeat", true);
+		heartbeat_req.responseType = "text";
+		heartbeat_req.setRequestHeader("sessionid",Game.sessionId);
+		heartbeat_req.setRequestHeader("playerid",Game.playerId);
+		heartbeat_req.send();
+		refresh_sessions();
 	}
 
 	function init_user() {
@@ -244,6 +407,7 @@ function GetFrame() {
 			playername="Player" + playerid;
 			document.cookie = "playername="+playername;
 		}
+		Game.playerId = playerid;
 		if (playername == "") {
 			playername="Player" + playerid;
 			document.cookie = "playername="+playername;
@@ -257,25 +421,27 @@ function GetFrame() {
 		setInterval(lobby_heartbeat, 1000 * 30); // 30s interval
 	}
 
-	function join_session() {
+	function join_best_session() {
 		var xhttp = new XMLHttpRequest();
 		xhttp.onload = function(oEvent) {
 			var parts = xhttp.response.split(',');
 			Game.sessionId = parts[0];
-			document.getElementById('player_index').value = parts[1];
+//			document.getElementById('player_index').value = parts[1];
+			Game.playerIndex = parts[1];
 			Game.playerIndex = parts[1];
 			Game.lastTick = performance.now();
 			main(performance.now());
 		};
 		xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_best_session", true);
 		xhttp.responseType = "text";
-		xhttp.setRequestHeader("id",get_value_from_cookie('playerid'));
+		xhttp.setRequestHeader("id",Game.playerId);
 		xhttp.setRequestHeader("name",document.getElementById("player_name").value);
 		xhttp.send();
 	}
 
 	init_user();
-	join_session();
+	join_best_session();
+	refresh_sessions();
 })();
 </script>
 </html>

@@ -494,42 +494,36 @@ X_ProcessIncoming(void)
 	int num_frames = 0;
 	int playerindex=0;
 
-	// no body index means we need to try to join a new session
-	// TODO this should never happen once we implement sessions
-	if (bodyindex == 0) {
-	} else {
-		memcpy(&sessionid, bodybuf, sizeof(int));
-		sessionid = ntohl(sessionid);
+	memcpy(&sessionid, bodybuf, sizeof(int));
+	sessionid = ntohl(sessionid);
 
-		memcpy(&global, &bodybuf[4], 1);
+	memcpy(&global, &bodybuf[4], 1);
 
-		int cache_len = 0;
-		byte* cache_data = X_GetStateFromCache(global, sessionid, &cache_len);
+	int cache_len = 0;
+	byte* cache_data = X_GetStateFromCache(global, sessionid, &cache_len);
 
-		G_DoDeserialize(cache_data, cache_len);
+	G_DoDeserialize(cache_data, cache_len);
 
-		memcpy(&playerindex, &bodybuf[5], sizeof(int));
-		playerindex = ntohl(playerindex);
+	memcpy(&playerindex, &bodybuf[5], sizeof(int));
+	playerindex = ntohl(playerindex);
 
-		int num_events = 0;
-		memcpy(&num_events, &bodybuf[9], sizeof(int));
-		num_events = ntohl(num_events);
-		printf("We got %d events\n", num_events);
+	int num_events = 0;
+	memcpy(&num_events, &bodybuf[9], sizeof(int));
+	num_events = ntohl(num_events);
+	printf("We got %d events\n", num_events);
 
-		for (int e=0;e<num_events;++e) {
-			byte event = bodybuf[13+e];
-			event_t es;
-			es.type = ev_keydown;
-			es.data1 = event;
-			D_PostEvent(&es);
-		}
-		memcpy(&num_frames, &bodybuf[13+num_events], sizeof(int));
-		num_frames = ntohl(num_frames);
-		printf("We are requesting %d frames\n", num_frames);
+	for (int e=0;e<num_events;++e) {
+		byte event = bodybuf[13+e];
+		event_t es;
+		es.type = ev_keydown;
+		es.data1 = event;
+		D_PostEvent(&es);
 	}
+	memcpy(&num_frames, &bodybuf[13+num_events], sizeof(int));
+	num_frames = ntohl(num_frames);
+	printf("We are requesting %d frames\n", num_frames);
 	doomcom->numplayers=4;
 	doomcom->consoleplayer=playerindex;
-done_parsing:
 	Z_Free(bodybuf);
 	return num_frames;
 }
@@ -560,8 +554,13 @@ X_RunAndSendResponse(int num_frames)
 	byte* gs_data = G_DoSerialize(&gs_len);
 	printf("serialize is len %d\n", gs_len);
 
+	const char* pop = getenv("FASTLY_POP");
+	int poplen = strlen(pop);
+	const char* hostname = getenv("FASTLY_HOSTNAME");
+	int hostlen = strlen(hostname);
+
 	// framebuffer * num_frames, num_frames, stateid
-	int buflen = expected_ss_len*num_frames + 2*sizeof(int);
+	int buflen = expected_ss_len*num_frames + 4*sizeof(int) + poplen + hostlen;
 	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0);
 	byte* fbp = finalbuffer;
 
@@ -576,6 +575,18 @@ X_RunAndSendResponse(int num_frames)
 
 	memcpy(fbp, &sessionid, sizeof(int));
 	fbp += sizeof(int);
+
+
+	printf("pop and hostname: %s, %s\n", pop, hostname);
+
+	memcpy(fbp, &poplen, sizeof(int));
+	fbp += 4;
+	memcpy(fbp, pop, strlen(pop));
+	fbp += strlen(pop);
+	memcpy(fbp, &hostlen, sizeof(int));
+	fbp += 4;
+	memcpy(fbp, hostname, strlen(hostname));
+	fbp += strlen(hostname);
 
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
