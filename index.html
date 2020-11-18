@@ -235,6 +235,13 @@ function RenderFrame() {
 	Game.lastRender = performance.now();
 }
 
+function get_frame_url() {
+	if (Game.pop == "") {
+		return "https://especially-cunning-bat.edgecompute.app/doomframe";
+	} else {
+		return "https://" + Game.pop + "_729.pop.demotool.site/doomframe";
+	}
+}
 function GetFrame() {
 	var xhttp = new XMLHttpRequest();
 	var startpost = performance.now();
@@ -261,14 +268,13 @@ function GetFrame() {
 			var poplen = dv.getInt32(8+num_frames*frame_len,true);
 			var poparray = new Uint8Array(arraybuffer.slice(12+num_frames*frame_len,12+num_frames*frame_len+poplen));
 			var pop = new TextDecoder("utf-8").decode(poparray);
-			if (Game.pop != pop) {
+			if (Game.pop != pop && Game.playerIndex == 0) {
 				Game.pop = pop;
 				var pop_update = new XMLHttpRequest();
 				pop_update.onload = function(oEvent) {
 					refresh_sessions();
 				}
 				pop_update.open("POST", "https://loudly-verified-elephant.edgecompute.app/update_pop_in_session", true);
-				pop_update.setRequestHeader("playerid",Game.playerId);
 				pop_update.setRequestHeader("sessionid",Game.sessionId);
 				pop_update.setRequestHeader("pop",Game.pop);
 				pop_update.send();
@@ -281,9 +287,10 @@ function GetFrame() {
 			Game.startpost = true;
 		}
 	};
-	xhttp.open("POST", "https://especially-cunning-bat.edgecompute.app/doomframe", true);
+	xhttp.open("POST", get_frame_url(), true);
 	xhttp.responseType = "arraybuffer";
 	var body = GeneratePostBody();
+	xhttp.setRequestHeader("doomgame", "1");
     xhttp.send(body);
 }
 
@@ -324,11 +331,7 @@ function refresh_sessions() {
 				} else {
 					playercell.innerHTML += player.name;
 				}
-				if (Game.pop != "") {
-					playercell.innerHTML += " (" + Game.pop + ")\n";
-				} else {
-					playercell.innerHTML += "\n";
-				}
+				playercell.innerHTML += "\n";
 			});
 			buttoncell.innerHTML = "<button id="+session.id+" onClick=join_session(this.id);>Join</button>"
 		});
@@ -339,7 +342,11 @@ function refresh_sessions() {
 }
 
 function join_session(id) {
-	xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_session", true);
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_session", true);
+		xhttp.onload = function(oEvent) {
+			console("IMPLEMENT");
+		}
 		xhttp.responseType = "text";
 		xhttp.setRequestHeader("playerid",Game.playerId);
 		xhttp.setRequestHeader("name",document.getElementById("player_name").value);
@@ -428,7 +435,7 @@ function join_session(id) {
 			Game.sessionId = parts[0];
 //			document.getElementById('player_index').value = parts[1];
 			Game.playerIndex = parts[1];
-			Game.playerIndex = parts[1];
+			Game.pop = parts[2];
 			Game.lastTick = performance.now();
 			main(performance.now());
 		};
