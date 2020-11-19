@@ -119,12 +119,11 @@ var Game = {
 	host: "",
 	migration: 0,
 	migrated_pop: "",
-	startpost: true,
 	keys: {},
 	frames: {},
 	numframes: 0,
 	lastTick: 0,
-	lastRender: 0,
+	lastFetch: 0,
 
 	maxposttimes: 100,
 	posttimes: [100],
@@ -244,7 +243,6 @@ function RenderFrame() {
 
 	ctx.scale(3,3);
 	ctx.drawImage(tempcanvas,0,0);
-	Game.lastRender = performance.now();
 }
 
 function get_frame_url() {
@@ -296,8 +294,6 @@ function GetFrame() {
 			var hostlen = dv.getInt32(12+num_frames*frame_len + poplen,true);
 			var hostarray = new Uint8Array(arraybuffer.slice(16+num_frames*frame_len + poplen,16+num_frames*frame_len + poplen + hostlen));
 			Game.host = new TextDecoder("utf-8").decode(hostarray);
-
-			Game.startpost = true;
 		}
 	};
 	xhttp.open("POST", get_frame_url(), true);
@@ -506,10 +502,10 @@ function get_value_from_cookie(key) {
 		if (Game.numframes > 0)
 			RenderFrame();
 
-		if (Game.startpost)
+		if (tFrame-Game.lastFetch > 50)
 		{
 			GetFrame();
-			Game.startpost = false;
+			Game.lastFetch = tFrame;
 		}
 	}
 
