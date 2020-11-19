@@ -380,7 +380,14 @@ function get_pops() {
 	xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/get_pops", true);
 	xhttp.onload = function(oEvent) {
 		Game.pops = JSON.parse(xhttp.response);
+		Game.pops.forEach(pop => {
+			var option = document.createElement("option");
+			option.text = pop.name;
+			option.value = pop.name;
+			document.getElementById('pop_override').add(option);
+		});
 		pings();
+		setInterval(pings, 1000 * 60); // 60s interval
 	}
 	xhttp.setRequestHeader("sessionid",Game.sessionId);
 	xhttp.setRequestHeader("playerid",Game.playerId);
@@ -398,32 +405,51 @@ function update_name_in_session()
 	xhttp.send();
 }
 
+function add_ping_to_session(pop,ping)
+{
+	var xhttp = new XMLHttpRequest();
+	xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/add_ping_to_session", true);
+	xhttp.setRequestHeader("sessionid",Game.sessionId);
+	xhttp.setRequestHeader("playerid",Game.playerId);
+	xhttp.setRequestHeader("pop",pop);
+	xhttp.setRequestHeader("ping", ping);
+	xhttp.send();
+}
+
 function lobby_heartbeat() {
 	var heartbeat_req = new XMLHttpRequest();
 	heartbeat_req.open("POST", "https://loudly-verified-elephant.edgecompute.app/heartbeat", true);
+	heartbeat_req.onload = function(oEvent) {
+		var new_pop = heartbeat_req.response;
+		if (new_pop != Game.pop) {
+			console.log("We should be moving to ", new_pop);
+			Game.migration = 1;
+			Game.migrated_pop = new_pop;
+		}
+	}
 	heartbeat_req.responseType = "text";
 	heartbeat_req.setRequestHeader("sessionid",Game.sessionId);
 	heartbeat_req.setRequestHeader("playerid",Game.playerId);
 	heartbeat_req.send();
 }
 
-function pings() {
-	Game.pops.forEach((pop,i) => {
-		var xhttp = new XMLHttpRequest();
-		var url = "https://" + pop.name + "_729.pop.demotool.site/ping";
-		xhttp.open("GET", url, true);
-		xhttp.setRequestHeader("doomgame", "1");
-		var start = performance.now();
-		xhttp.onload = function(oEvent) {
-			var ping = performance.now() - start;
-			Game.pops[i].ping = ping;
-			var option = document.createElement("option");
-			option.text = pop.name + " (" + Math.floor(ping) + "ms)";
-			option.value = pop.name;
-			document.getElementById('pop_override').add(option);
+async function pings() {
+	for (let i = 0, p = Promise.resolve(); i < Game.pops.length; i++) {
+		p = p.then(_ => new Promise(resolve => {
+			var url = "https://" + Game.pops[i].name + "_729.pop.demotool.site/ping";
+			var xhttp = new XMLHttpRequest();
+			xhttp.open("GET", url, true);
+			xhttp.setRequestHeader("doomgame", "1");
+			var start = performance.now();
+			xhttp.onload = function(oEvent) {
+				var ping = Math.floor(performance.now() - start);
+				Game.pops[i].ping = ping;
+				add_ping_to_session(Game.pops[i].name, ping);
+				resolve();
+			}
+			xhttp.send();
 		}
-		xhttp.send();
-	});
+	));}
 }
 
 function init_user() {
@@ -449,12 +475,12 @@ function init_user() {
 	}
 
 	document.getElementById('pop_override').onchange = function() {
-		Game.migration = 1;	
-		Game.migrated_pop = elem.value;
+		Game.migration = 1;
+		Game.migrated_pop = document.getElementById('pop_override').value;
 	}
 
-	setInterval(refresh_sessions, 1000 * 30); // 3s interval
-	setInterval(lobby_heartbeat, 1000 * 30); // 30s interval
+	setInterval(refresh_sessions, 1000 * 3); // 3s interval
+	setInterval(lobby_heartbeat, 1000 * 3); // 3s interval
 }
 
 
