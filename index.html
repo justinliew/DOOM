@@ -280,7 +280,8 @@ function GetFrame() {
 			var pop = new TextDecoder("utf-8").decode(poparray);
 			if (Game.pop != pop && Game.playerIndex == 0 && Game.migration == 0) {
 				Game.pop = pop;
-				document.getElementById('popdisplay').innerHTML = "running on " + Game.pop;
+				if (Game.pop != "")
+					document.getElementById('popdisplay').innerHTML = "running on " + Game.pop;
 				var pop_update = new XMLHttpRequest();
 				pop_update.onload = function(oEvent) {
 					refresh_sessions();
@@ -307,7 +308,8 @@ function GetFrame() {
 		Game.migration = 2;
 		Game.pop = Game.migrated_pop;
 		Game.migrated_pop = "";
-		document.getElementById('popdisplay').innerHTML = "running on " + Game.pop;
+		if (Game.pop != "")
+			document.getElementById('popdisplay').innerHTML = "running on " + Game.pop;
 	}
 }
 
@@ -417,7 +419,7 @@ function lobby_heartbeat() {
 	heartbeat_req.open("POST", "https://loudly-verified-elephant.edgecompute.app/heartbeat", true);
 	heartbeat_req.onload = function(oEvent) {
 		var new_pop = heartbeat_req.response;
-		if (new_pop != Game.pop) {
+		if (new_pop != Game.pop && new_pop != "") {
 			console.log("We should be moving to ", new_pop);
 			Game.migration = 1;
 			Game.migrated_pop = new_pop;
@@ -517,8 +519,10 @@ function get_value_from_cookie(key) {
 	//			document.getElementById('player_index').value = parts[1];
 			Game.playerIndex = parts[1];
 			Game.pop = parts[2];
+			document.getElementById('popdisplay').innerHTML = "running on " + Game.pop;
 			Game.lastTick = performance.now();
 			main(performance.now());
+			get_pops();
 		};
 		xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_best_session", true);
 		xhttp.responseType = "text";
@@ -527,7 +531,6 @@ function get_value_from_cookie(key) {
 		xhttp.send();
 	}
 
-	get_pops();
 	init_user();
 	join_best_session();
 	refresh_sessions();
