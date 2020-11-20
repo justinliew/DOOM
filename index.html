@@ -4,7 +4,6 @@
 DOOM@EDGE <span id="popdisplay"></span>
 
 Player Name <input id="player_name" value="" />
-DEBUG Change Pop <select id="pop_override" value=""></select>
 <button onClick="showControlsOverlay();">Show Controls</button>
 </div>
 <!--Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" /> -->
@@ -317,6 +316,14 @@ function GetFrame() {
 		Game.migrated_pop = "";
 		if (Game.pop != "")
 			document.getElementById('popdisplay').innerHTML = "running on " + Game.pop;
+		var pop_update = new XMLHttpRequest();
+		pop_update.onload = function(oEvent) {
+			refresh_sessions();
+		}
+		pop_update.open("POST", "https://loudly-verified-elephant.edgecompute.app/update_pop_in_session", true);
+		pop_update.setRequestHeader("sessionid",Game.sessionId);
+		pop_update.setRequestHeader("pop",Game.pop);
+		pop_update.send();
 	}
 }
 
@@ -389,7 +396,6 @@ function get_pops() {
 			var option = document.createElement("option");
 			option.text = pop.name;
 			option.value = pop.name;
-			document.getElementById('pop_override').add(option);
 		});
 		pings(false);
 		pings(true);
@@ -498,11 +504,6 @@ function init_user() {
 	document.getElementById("player_name").onchange = function() {
 		document.cookie = "playername="+document.getElementById("player_name").value;
 		update_name_in_session();
-	}
-
-	document.getElementById('pop_override').onchange = function() {
-		Game.migration = 1;
-		Game.migrated_pop = document.getElementById('pop_override').value;
 	}
 
 	setInterval(refresh_sessions, 1000 * 3); // 3s interval
