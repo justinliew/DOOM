@@ -171,7 +171,7 @@ function GeneratePostBody() {
 
 	} else if (Game.migration == 2) {
 		view.setUint8(4,2); // 2 means read from global, write to local
-		Game.migration = 0;
+		Game.migration = 3; // 3 means we will ignore any packets not from the migrated pop for a while
 	} else {
 		view.setUint8(4,0); // local for both read/write
 	}
@@ -278,6 +278,13 @@ function GetFrame() {
 			var poplen = dv.getInt32(8+num_frames*frame_len,true);
 			var poparray = new Uint8Array(arraybuffer.slice(12+num_frames*frame_len,12+num_frames*frame_len+poplen));
 			var pop = new TextDecoder("utf-8").decode(poparray);
+			if (Game.migration == 3 && Game.pop != pop) {
+				// ignore any packets that aren't from our new pop
+				return;
+			} else if (Game.migration == 3 && Game.pop == pop) {
+				// once we get one from our new pop, assume we are good to go.
+				Game.migration == 0;
+			}
 			if (Game.pop != pop && Game.playerIndex == 0 && Game.migration == 0) {
 				Game.pop = pop;
 				if (Game.pop != "")
