@@ -384,8 +384,9 @@ function get_pops() {
 			option.value = pop.name;
 			document.getElementById('pop_override').add(option);
 		});
-		pings();
-		setInterval(pings, 1000 * 60); // 60s interval
+		pings(false);
+		pings(true);
+		setInterval(pings, 1000 * 60, true); // 60s interval
 	}
 	xhttp.setRequestHeader("sessionid",Game.sessionId);
 	xhttp.setRequestHeader("playerid",Game.playerId);
@@ -403,15 +404,13 @@ function update_name_in_session()
 	xhttp.send();
 }
 
-function add_ping_to_session(pop,ping)
+function add_pings_to_session()
 {
 	var xhttp = new XMLHttpRequest();
-	xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/add_ping_to_session", true);
+	xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/add_pings_to_session", true);
 	xhttp.setRequestHeader("sessionid",Game.sessionId);
 	xhttp.setRequestHeader("playerid",Game.playerId);
-	xhttp.setRequestHeader("pop",pop);
-	xhttp.setRequestHeader("ping", ping);
-	xhttp.send();
+	xhttp.send(JSON.stringify(Game.pops));
 }
 
 function lobby_heartbeat() {
@@ -431,24 +430,46 @@ function lobby_heartbeat() {
 	heartbeat_req.send();
 }
 
-async function pings() {
-	for (let i = 0, p = Promise.resolve(); i < Game.pops.length; i++) {
-		p = p.then(_ => new Promise(resolve => {
-			var url = "https://" + Game.pops[i].name + "_729.pop.demotool.site/ping";
-			var xhttp = new XMLHttpRequest();
-			xhttp.open("GET", url, true);
-			xhttp.setRequestHeader("doomgame", "1");
+async function pings(record) {
+	if (record) {
+		Game.pendingPings = Game.pops.length;
+	}
+	for (let i = 0; i < Game.pops.length; i++) {
+		var url = "https://" + Game.pops[i].name + "_729.pop.demotool.site/ping";
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", url, true);
+		if (record) {
 			var start = performance.now();
 			xhttp.onload = function(oEvent) {
 				var ping = Math.floor(performance.now() - start);
 				Game.pops[i].ping = ping;
-				add_ping_to_session(Game.pops[i].name, ping);
-				resolve();
+				Game.pendingPings--;
+				if (Game.pendingPings == 0) {
+					add_pings_to_session();
+				}
 			}
-			xhttp.send();
 		}
-	));}
+		xhttp.send();
+	}
 }
+
+// async function pings() {
+// 	for (let i = 0, p = Promise.resolve(); i < Game.pops.length; i++) {
+// 		p = p.then(_ => new Promise(resolve => {
+// 			var url = "https://" + Game.pops[i].name + "_729.pop.demotool.site/ping";
+// 			var xhttp = new XMLHttpRequest();
+// 			xhttp.open("GET", url, true);
+// 			xhttp.setRequestHeader("doomgame", "1");
+// 			var start = performance.now();
+// 			xhttp.onload = function(oEvent) {
+// 				var ping = Math.floor(performance.now() - start);
+// 				Game.pops[i].ping = ping;
+// 				resolve();
+// 			}
+// 			xhttp.send();
+// 		}
+// 	));}
+// }
 
 function init_user() {
 	var playerid=get_value_from_cookie('playerid');
