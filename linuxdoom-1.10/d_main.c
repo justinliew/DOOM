@@ -1109,7 +1109,60 @@ X_HandleUrl(const char* uri)
 
 		return true;
 	}
+
+	if (strstr(uri, ".well-known/fastly/demo-manifest"))
+	{
+		ResponseHandle resphandle;
+		BodyHandle respbodyhandle;
+
+		xqd_resp_new(&resphandle);
+		xqd_body_new(&respbodyhandle);
+
+		const char* data = "---\n\
+schemaVersion: 1\n\
+id: doom\n\
+title: DOOM\n\
+image:\n\
+  href: /images/screenshot.png\n\
+  alt: DOOM on Compute @ Edge Demo\n\
+description: |\n\
+  A port of the original DOOM to Compute@Edge\n\
+  This demo was created to push the boundaries of the \n\
+  platform and inspire new ideas!\n\
+views:\n\
+  endUser:\n\
+    mode: frame\n\
+    href: /\n\
+    height: 600\n\
+---\n\
+Key bindings:\n\
+W to move forward\n\
+S to move backward\n\
+A to turn left\n\
+D to turn right\n\
+Q to strafe left\n\
+E to strafe right\n\
+F to fire gun\n\
+U to use\n";
+
+		int nwritten=0;
+		int ret = xqd_body_write(respbodyhandle, data, strlen(data), BodyWriteEndBack, &nwritten);
+
+		const char* cors_header_name = "Access-Control-Allow-Origin";
+		const char* cors_header_value = "*";
+		xqd_resp_header_append(resphandle, cors_header_name, strlen(cors_header_name), cors_header_value, strlen(cors_header_value) );
+
+		const char* vary_header_name = "Vary";
+		const char* vary_header_value = "Origin";
+		xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
+
+		int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+		return true;
+	}
+
+
 	if (!strstr(uri, "doomframe")) {
+		printf("Handle root serving\n");
 		// we need to serve the html here
 		ResponseHandle resphandle;
 		BodyHandle respbodyhandle;
