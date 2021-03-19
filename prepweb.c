@@ -3,9 +3,14 @@
 #include <string.h>
 
 int
-main()
+main(int argc, char* argv[])
 {
-	FILE *src = fopen("index.html", "r");
+	FILE *src;
+	if (argc == 2) {
+		src = fopen("index_sp.html", "r");
+	} else {
+		src = fopen("index.html", "r");
+	}
 	FILE *dst = fopen("linuxdoom-1.10/index.html", "w");
 
 	fseek(src, 0L, SEEK_END);
