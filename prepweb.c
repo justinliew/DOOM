@@ -22,27 +22,25 @@ main()
 		line[strlen(line)-1] = '\0';
 
 		/* get the first token */
-		char* token = strtok(line, "\"");
-		printf("first token %s\n", token);
-
+		char *p = line;
+		char* q = strchr(line, '\"');
 		char out[256];
 		out[0] = '\0';
 		strcat(out,"\"");
-		if (token != NULL) {
-			strcat(out,token);
-
-			token = strtok(NULL, "\"");
-			/* walk through other tokens */
-			while( token != NULL ) {
-				strcat(out, "\\\"");
-				strcat(out, token);
-
-				token = strtok(NULL, "\"");
-			}
+		int index=1;
+		while (q != NULL) {
+			char found[256];
+			strncpy(found, p, q-p);
+			strncpy(&out[index], found, q-p);
+			strncpy(&out[index+(q-p)], "\\\"", 2);
+			index += (q-p + 2);
+			p = q+1;
+			q = strchr(p, '\"');
 		}
-		strcat(out,"\\n\"\n");
-		printf("end; outputting %s\n", out);
+		strcpy(&out[index], p);
 
+		out[index+strlen(p)] = '\0';
+		strcat(out,"\\n\"\n");
 		fputs(out,dst);
 	}
 	fclose(src);
