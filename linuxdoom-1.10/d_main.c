@@ -522,8 +522,13 @@ X_ProcessIncoming(void)
 	memcpy(&num_frames, &bodybuf[13+num_events], sizeof(int));
 	num_frames = ntohl(num_frames);
 	printf("We are requesting %d frames\n", num_frames);
+#ifdef XQDMP
 	doomcom->numplayers=4;
 	doomcom->consoleplayer=playerindex;
+#else
+	consoleplayer=playerindex;
+	displayplayer=playerindex;
+#endif
 	Z_Free(bodybuf);
 	return num_frames;
 }
@@ -1126,7 +1131,7 @@ image:\n\
   href: /images/screenshot.png\n\
   alt: DOOM on Compute @ Edge Demo\n\
 description: |\n\
-  A port of the original DOOM to Compute@Edge\n\
+  A port of the original DOOM to Compute@Edge. \n\
   This demo was created to push the boundaries of the \n\
   platform and inspire new ideas!\n\
 views:\n\
@@ -1135,15 +1140,15 @@ views:\n\
     href: /\n\
     height: 600\n\
 ---\n\
-Key bindings:\n\
-W to move forward\n\
-S to move backward\n\
-A to turn left\n\
-D to turn right\n\
-Q to strafe left\n\
-E to strafe right\n\
-F to fire gun\n\
-U to use\n";
+Key bindings:<br/>\n\
+W to move forward<br/>\n\
+S to move backward<br/>\n\
+A to turn left<br/>\n\
+D to turn right<br/>\n\
+Q to strafe left<br/>\n\
+E to strafe right<br/>\n\
+F to fire gun<br/>\n\
+U to use trigger/door\n";
 
 		int nwritten=0;
 		int ret = xqd_body_write(respbodyhandle, data, strlen(data), BodyWriteEndBack, &nwritten);
@@ -1232,7 +1237,7 @@ D_DoomMain(void)
 	else if (M_CheckParm("-deathmatch"))
 		deathmatch = 1;
 // forcing deathmatch on
-#ifdef WASISDK
+#ifdef XQDMP
 	deathmatch = 1;
 #endif
 

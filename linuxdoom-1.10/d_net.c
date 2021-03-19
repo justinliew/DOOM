@@ -593,7 +593,9 @@ void D_CheckNetGame (int playerindex)
     
     netbuffer = &doomcom->data;
     consoleplayer = displayplayer = doomcom->consoleplayer;
+#ifdef XQDMP
 	doomcom->numplayers = 4;
+#endif
     if (netgame)
 	D_ArbitrateNetStart ();
 
