@@ -1144,14 +1144,14 @@ DOOM was open sourced in 1997, and there is one phrase in the README that rings 
 \n\
 > **WARNING!** You may need to click or tab to the frame above to focus it before these controls will work.\n\
 \n\
-W to move forward\n\
-S to move backward\n\
-A to turn left\n\
-D to turn right\n\
-Q to strafe left\n\
-E to strafe right\n\
-F to fire gun\n\
-U to use\n";
+* `W` to move forward\n\
+* `S` to move backward\n\
+* `A` to turn left\n\
+* `D` to turn right\n\
+* `Q` to strafe left\n\
+* `E` to strafe right\n\
+* `F` to fire gun\n\
+* `U` to use\n";
 
 		int nwritten=0;
 		int ret = xqd_body_write(respbodyhandle, data, strlen(data), BodyWriteEndBack, &nwritten);
