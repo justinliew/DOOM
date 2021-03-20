@@ -282,22 +282,22 @@ void I_InitNetwork (int playerindex)
     }
     else
 	doomcom-> ticdup = 1;
-	
+
     if (M_CheckParm ("-extratic"))
 	doomcom-> extratics = 1;
     else
 	doomcom-> extratics = 0;
-		
+
     p = M_CheckParm ("-port");
     if (p && p<myargc-1)
     {
 	DOOMPORT = atoi (myargv[p+1]);
 	printf ("using alternate port %i\n",DOOMPORT);
     }
-    
+
     // parse network game options,
     //  -net <consoleplayer> <host> <host> ...
-#ifndef WASISDK
+#ifndef XQDMP
     i = M_CheckParm ("-net");
     if (!i)
     {
@@ -316,7 +316,7 @@ void I_InitNetwork (int playerindex)
     netgame = true;
 
     // parse player number and host list
-#ifndef WASISDK
+#ifndef XQDMP
     doomcom->consoleplayer = myargv[i+1][0]-'1';
     doomcom->numnodes = 1;	// this node for sure
 #else

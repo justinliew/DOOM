@@ -1,0 +1,359 @@
+<html>
+
+<!--Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" /> -->
+
+<!--
+	Key bindings
+    {"key_right",&key_right, 'D'},
+    {"key_left",&key_left, 'A'},
+    {"key_up",&key_up, 'W'},
+    {"key_down",&key_down, 'S'},
+    {"key_strafeleft",&key_strafeleft, 'Q'},
+    {"key_straferight",&key_straferight, 'E'},
+
+    {"key_fire",&key_fire, 'F'},
+    {"key_use",&key_use, 'U'},
+    {"key_strafe",&key_strafe, KEY_RALT},
+    {"key_speed",&key_speed, KEY_RSHIFT},
+-->
+
+<div id="overlay" onclick="removeControlsOverlay()">
+	<div id="text">
+		W to move forward
+		S to move backward
+		A to turn left
+		D to turn right
+		Q to strafe left
+		E to strafe right
+		F to fire
+		U to use (and respawn)
+	</div>
+  </div>
+
+<canvas id="framebuffer"></canvas>
+
+<div>
+<button onClick="showControlsOverlay();">Show Controls</button>
+</div>
+
+<style>
+div {
+    white-space: pre-wrap;
+}
+
+table {
+  table-layout: fixed;
+  width: 40%;
+  border-collapse: collapse;
+  border: 2px solid purple;
+}
+
+thead th:nth-child(1) {
+  width: 10%;
+}
+
+thead th:nth-child(2) {
+  width: 70%;
+}
+
+thead th:nth-child(3) {
+  width: 20%;
+}
+
+th, td {
+  padding: 5px;
+}
+
+tbody td {
+  text-align: center;
+}
+
+thead td {
+	text-align: center;
+}
+
+table td, table th {
+	white-space: pre-wrap;
+	border: 1px solid black;
+}
+
+#overlay {
+  position: fixed;
+  display: none;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 2;
+  cursor: pointer;
+}
+
+#text{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 20px;
+  color: white;
+  transform: translate(-50%,-50%);
+  -ms-transform: translate(-50%,-50%);
+}
+</style>
+
+<script>
+var Game = {
+	stopMain: {},
+	sessionId: -1,
+	playerId: -1,
+	playerIndex: 0,
+	globalpop: false,
+	pop: "",
+	host: "",
+	startpost: true,
+	keys: {},
+	frames: {},
+	numframes: 0,
+	lastTick: 0,
+	lastRender: 0,
+
+	maxposttimes: 100,
+	posttimes: [100],
+	numposttimes: 0,
+	postindex: 0,
+	postfull: false,
+};
+
+function removeControlsOverlay() {
+	document.getElementById("overlay").style.display = "none";
+};
+
+function showControlsOverlay() {
+	document.getElementById("overlay").style.display = "block";
+}
+
+function AddPostTime(time) {
+	if (!Game.postfull) {
+		Game.numposttimes++;
+	}
+	if (Game.numposttimes == Game.maxposttimes) {
+		Game.postfull = true;
+	}
+	Game.postindex = (Game.postindex + 1) % Game.numposttimes;
+	Game.posttimes[Game.postindex] = time;
+}
+
+function GetAveragePostTime() {
+	var total = 0;
+	for (i=0;i<Game.numposttimes;++i) {
+		total += Game.posttimes[i];
+	}
+	return total / Game.numposttimes;
+}
+
+function GeneratePostBody() {
+	var numevents = Object.keys(Game.keys).length;
+	var body = new ArrayBuffer(13 + numevents + 4);
+	var view = new DataView(body);
+	view.setUint32(0,Game.sessionId);
+	view.setUint8(4,Game.globalpop);
+
+	view.setUint32(5, Game.playerIndex);
+	view.setUint32(9, numevents);
+	var index=0;
+	for (var key in Game.keys) {
+		view.setUint8(13+index,key);
+		index++;
+	}
+	var num_requested_frames = 1; // adaptive frame interpolation isn't helping a lot yet.
+	view.setUint32(13+index,num_requested_frames);
+
+	return body;
+}
+
+// helper in case we need to download data for inspection
+function download(filename, data) {
+    var element = document.createElement('a');
+    element.setAttribute('href', 'data:binary/octet-stream,' + data);
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+}
+
+document.addEventListener('keydown', (event) => {
+  Game.keys[event.keyCode] = 1;
+}, false);
+
+document.addEventListener('keyup', (event) => {
+	delete Game.keys[event.keyCode];
+}, false);
+
+function RenderFrame() {
+	const rawcanvas = document.getElementById('framebuffer');
+	rawcanvas.width = 960;
+	rawcanvas.height = 600;
+	const ctx = rawcanvas.getContext('2d');
+
+	var imageData = ctx.getImageData(0, 0, 100, 100);
+	var data = new Uint8ClampedArray(4 * 320 * 200);
+
+	var palette = new Uint8ClampedArray(256*3);
+	for (var i = 0; i < 256 * 3; ++i) {
+		palette[i] = Game.frames[0][i];
+	}
+	//for (var i = 256*3; i < fb.length; i += 4) {
+	fb_index = 256*3;
+	for (var i = 0; i < data.length; i += 4) {
+		data[i] = palette[Game.frames[0][fb_index]*3];
+		data[i+1] = palette[Game.frames[0][fb_index]*3+1];
+		data[i+2] = palette[Game.frames[0][fb_index]*3+2];
+		data[i+3] = 255;
+		fb_index++;
+	}
+
+	var imageData = new ImageData(data, 320,200);
+	tempcanvas = document.createElement('canvas');
+	tempcanvas.width=320;
+	tempcanvas.height=200;
+	var tempctx = tempcanvas.getContext('2d');
+	tempctx.putImageData(imageData,0,0);
+
+	ctx.scale(3,3);
+	ctx.drawImage(tempcanvas,0,0);
+	Game.lastRender = performance.now();
+}
+
+function GetFrame() {
+	var xhttp = new XMLHttpRequest();
+	var startpost = performance.now();
+	xhttp.onload = function(oEvent) {
+		var posttime = performance.now() - startpost;
+		AddPostTime(posttime);
+		var arraybuffer = xhttp.response;
+		if (arraybuffer) {
+			var byteArray = new Uint8Array(arraybuffer);
+			var dv = new DataView(arraybuffer);
+
+			let num_frames = dv.getInt32(0, true); // number of frames
+			let frame_len = 320*200 + 768;
+
+			for (i=0;i<num_frames;++i) {
+				let fb = new Uint8Array(arraybuffer.slice(4+i*frame_len));
+				Game.frames[i] = fb;
+			}
+
+			Game.numframes = num_frames;
+
+			Game.sessionId = dv.getInt32(4+num_frames*frame_len,true);
+
+			var poplen = dv.getInt32(8+num_frames*frame_len,true);
+			var poparray = new Uint8Array(arraybuffer.slice(12+num_frames*frame_len,12+num_frames*frame_len+poplen));
+			var pop = new TextDecoder("utf-8").decode(poparray);
+			if (Game.pop != pop) {
+				Game.pop = pop;
+				var pop_update = new XMLHttpRequest();
+				pop_update.open("POST", "https://loudly-verified-elephant.edgecompute.app/update_pop_in_session", true);
+				pop_update.setRequestHeader("playerid",Game.playerId);
+				pop_update.setRequestHeader("sessionid",Game.sessionId);
+				pop_update.setRequestHeader("pop",Game.pop);
+				pop_update.send();
+			}
+
+			var hostlen = dv.getInt32(12+num_frames*frame_len + poplen,true);
+			var hostarray = new Uint8Array(arraybuffer.slice(16+num_frames*frame_len + poplen,16+num_frames*frame_len + poplen + hostlen));
+			Game.host = new TextDecoder("utf-8").decode(hostarray);
+
+			Game.startpost = true;
+		}
+	};
+	xhttp.open("POST", "https://especially-cunning-bat.edgecompute.app/doomframe", true);
+	xhttp.responseType = "arraybuffer";
+	var body = GeneratePostBody();
+    xhttp.send(body);
+}
+
+;(function () {
+	function main( tFrame ) {
+		Game.stopMain = window.requestAnimationFrame( main );
+		var delta = tFrame-Game.lastTick;
+		Game.lastTick = tFrame;
+
+		if (Game.numframes > 0)
+			RenderFrame();
+
+		if (Game.startpost)
+		{
+			GetFrame();
+			Game.startpost = false;
+		}
+	}
+
+	function get_value_from_cookie(key) {
+		var value;
+		var row = document.cookie
+			.split('; ')
+			.find(row => row.startsWith(key));
+			if (typeof row != "undefined") {
+				value = row.split('=')[1];
+			} else {
+				value = "";
+			}
+		return value;
+	}
+
+	function lobby_heartbeat() {
+		var heartbeat_req = new XMLHttpRequest();
+		heartbeat_req.open("POST", "https://loudly-verified-elephant.edgecompute.app/heartbeat", true);
+		heartbeat_req.responseType = "text";
+		heartbeat_req.setRequestHeader("sessionid",Game.sessionId);
+		heartbeat_req.setRequestHeader("playerid",Game.playerId);
+		heartbeat_req.send();
+	}
+
+	function init_user() {
+		var playerid=get_value_from_cookie('playerid');
+		var playername = get_value_from_cookie('playername');
+
+		if (playerid == 0) {
+			playerid = Math.floor(Math.random() * 100000);
+			document.cookie = "playerid="+playerid;
+			playername="Player" + playerid;
+			document.cookie = "playername="+playername;
+		}
+		Game.playerId = playerid;
+		if (playername == "") {
+			playername="Player" + playerid;
+			document.cookie = "playername="+playername;
+		}
+		setInterval(lobby_heartbeat, 1000 * 30); // 30s interval
+	}
+
+	function create_and_join_session() {
+		var xhttp = new XMLHttpRequest();
+		xhttp.onload = function(oEvent) {
+			var parts = xhttp.response.split(',');
+			Game.sessionId = parts[0];
+			Game.playerIndex = parts[1];
+			Game.pop = parts[2];
+			Game.lastTick = performance.now();
+			main(performance.now());
+		};
+		xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/create_and_join_session", true);
+		xhttp.responseType = "text";
+		xhttp.setRequestHeader("id",Game.playerId);
+		var playername = get_value_from_cookie('playername');
+		xhttp.setRequestHeader("name", playername);
+		xhttp.send();
+	}
+
+	init_user();
+	create_and_join_session();
+})();
+</script>
+</html>

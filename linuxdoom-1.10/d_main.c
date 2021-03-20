@@ -522,8 +522,13 @@ X_ProcessIncoming(void)
 	memcpy(&num_frames, &bodybuf[13+num_events], sizeof(int));
 	num_frames = ntohl(num_frames);
 	printf("We are requesting %d frames\n", num_frames);
+#ifdef XQDMP
 	doomcom->numplayers=4;
 	doomcom->consoleplayer=playerindex;
+#else
+	consoleplayer=playerindex;
+	displayplayer=playerindex;
+#endif
 	Z_Free(bodybuf);
 	return num_frames;
 }
@@ -1126,7 +1131,7 @@ image:\n\
   href: /images/screenshot.png\n\
   alt: DOOM on Compute @ Edge Demo\n\
 description: |\n\
-  A port of the original DOOM to Compute@Edge\n\
+  A port of the original DOOM to Compute@Edge. \n\
   This demo was created to push the boundaries of the \n\
   platform and inspire new ideas!\n\
 views:\n\
@@ -1240,7 +1245,7 @@ D_DoomMain(void)
 	else if (M_CheckParm("-deathmatch"))
 		deathmatch = 1;
 // forcing deathmatch on
-#ifdef WASISDK
+#ifdef XQDMP
 	deathmatch = 1;
 #endif
 

@@ -9,6 +9,7 @@ CC=/opt/wasi-sdk/bin/clang --sysroot /opt/wasi-sdk/share/wasi-sysroot
 
 #CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK 
 CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQD -Wl,--allow-undefined # -DUSEASM 
+#CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQDMP -DXQD -Wl,--allow-undefined # -DUSEASM 
 LDFLAGS=
 LIBS=-lm 
 
