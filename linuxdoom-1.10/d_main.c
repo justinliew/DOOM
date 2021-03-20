@@ -1140,15 +1140,23 @@ views:\n\
     href: /\n\
     height: 600\n\
 ---\n\
-Key bindings:<br/>\n\
-W to move forward<br/>\n\
-S to move backward<br/>\n\
-A to turn left<br/>\n\
-D to turn right<br/>\n\
-Q to strafe left<br/>\n\
-E to strafe right<br/>\n\
-F to fire gun<br/>\n\
-U to use trigger/door\n";
+\n\
+DOOM was a game developed in 1993 by [id software](https://www.idsoftware.com/) and released in December of that year. Id software had made a living developing high quality 2D games, but with Wolfenstein in 1992 and then DOOM the following year, they made a historic leap into 3D, taking advantage of the quickly evolving PC hardware landscape to push the boundaries of the industry.\n\
+\n\
+DOOM was open sourced in 1997, and there is one phrase in the README that rings very true: “Port it to your favorite operating system” has come true, with DOOM being ported to hundreds of platforms, from the obvious to the obscure. Now we can show you how we brought it to Compute@Edge.\n\
+\n\
+## Key bindings:\n\
+\n\
+> **WARNING!** You may need to click or tab to the frame above to focus it before these controls will work.\n\
+\n\
+* `W` to move forward\n\
+* `S` to move backward\n\
+* `A` to turn left\n\
+* `D` to turn right\n\
+* `Q` to strafe left\n\
+* `E` to strafe right\n\
+* `F` to fire gun\n\
+* `U` to use\n";
 
 		int nwritten=0;
 		int ret = xqd_body_write(respbodyhandle, data, strlen(data), BodyWriteEndBack, &nwritten);
