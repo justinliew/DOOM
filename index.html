@@ -1,11 +1,16 @@
 <html>
 
-<div>
+<div id="headeroverlay">
 DOOM@EDGE
 
 Player Name <input id="player_name" value="" />
 <button onClick="showControlsOverlay();">Show Controls</button>
 </div>
+
+<div id="waiting">
+	Too Many Players; please wait.
+	</div>
+
 <!--Player Index <input type="number" id="player_index" value="0" step="1" min="0" max="3" /> -->
 
 <!--
@@ -111,6 +116,7 @@ table td, table th {
 <script>
 var Game = {
 	stopMain: {},
+	started: false,
 	sessionId: -1,
 	playerId: -1,
 	playerIndex: 0,
@@ -325,9 +331,9 @@ function refresh_sessions() {
 					playercell.innerHTML += player.name;
 				}
 				if (Game.pop != "") {
-					playercell.innerHTML += " (" + Game.pop + ")\n";
+					playercell.innerHTML += " (" + Game.pop + ")\\n";
 				} else {
-					playercell.innerHTML += "\n";
+					playercell.innerHTML += "\\n";
 				}
 			});
 			buttoncell.innerHTML = "<button id="+session.id+" onClick=join_session(this.id);>Join</button>"
@@ -354,13 +360,15 @@ function join_session(id) {
 		var delta = tFrame-Game.lastTick;
 		Game.lastTick = tFrame;
 
-		if (Game.numframes > 0)
-			RenderFrame();
+		if (Game.started) {
+			if (Game.numframes > 0)
+				RenderFrame();
 
-		if (Game.startpost)
-		{
-			GetFrame();
-			Game.startpost = false;
+			if (Game.startpost)
+			{
+				GetFrame();
+				Game.startpost = false;
+			}
 		}
 	}
 
@@ -389,6 +397,11 @@ function join_session(id) {
 
 	function lobby_heartbeat() {
 		var heartbeat_req = new XMLHttpRequest();
+		heartbeat_req.onload = function(oEvent) {
+			if (!Game.started && heartbeat_req.status == 200) {
+				join_best_session();
+			}
+		}
 		heartbeat_req.open("POST", "https://loudly-verified-elephant.edgecompute.app/heartbeat", true);
 		heartbeat_req.responseType = "text";
 		heartbeat_req.setRequestHeader("sessionid",Game.sessionId);
@@ -424,13 +437,25 @@ function join_session(id) {
 	function join_best_session() {
 		var xhttp = new XMLHttpRequest();
 		xhttp.onload = function(oEvent) {
-			var parts = xhttp.response.split(',');
-			Game.sessionId = parts[0];
-//			document.getElementById('player_index').value = parts[1];
-			Game.playerIndex = parts[1];
-			Game.playerIndex = parts[1];
-			Game.lastTick = performance.now();
-			main(performance.now());
+			if (xhttp.status == 200) {
+				var parts = xhttp.response.split(',');
+				Game.sessionId = parts[0];
+	//			document.getElementById('player_index').value = parts[1];
+				Game.playerIndex = parts[1];
+				Game.playerIndex = parts[1];
+				Game.lastTick = performance.now();
+				Game.started = true;
+				document.getElementById('headeroverlay').style.display = 'block';
+				document.getElementById('sessions_table').style.display = 'block';
+				document.getElementById('waiting').style.display = 'none';
+				main(performance.now());
+			} else {
+				Game.started = false;
+				document.getElementById('headeroverlay').style.display = 'none';
+				document.getElementById('sessions_table').style.display = 'none';
+				document.getElementById('waiting').style.display = 'block';
+				main(performance.now());
+			}
 		};
 		xhttp.open("GET", "https://loudly-verified-elephant.edgecompute.app/join_best_session", true);
 		xhttp.responseType = "text";

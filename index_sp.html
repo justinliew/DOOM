@@ -32,8 +32,12 @@
 
 <canvas id="framebuffer"></canvas>
 
-<div>
+<div id="controlsbutton">
 <button onClick="showControlsOverlay();">Show Controls</button>
+</div>
+
+<div id="waiting">
+Too Many Players; please wait.
 </div>
 
 <style>
@@ -105,6 +109,7 @@ table td, table th {
 <script>
 var Game = {
 	stopMain: {},
+	started: false,
 	sessionId: -1,
 	playerId: -1,
 	playerIndex: 0,
@@ -284,13 +289,15 @@ function GetFrame() {
 		var delta = tFrame-Game.lastTick;
 		Game.lastTick = tFrame;
 
-		if (Game.numframes > 0)
-			RenderFrame();
+		if (Game.started) {
+			if (Game.numframes > 0)
+				RenderFrame();
 
-		if (Game.startpost)
-		{
-			GetFrame();
-			Game.startpost = false;
+			if (Game.startpost)
+			{
+				GetFrame();
+				Game.startpost = false;
+			}
 		}
 	}
 
@@ -309,6 +316,12 @@ function GetFrame() {
 
 	function lobby_heartbeat() {
 		var heartbeat_req = new XMLHttpRequest();
+		heartbeat_req.onload = function(oEvent) {
+			if (!Game.started && heartbeat_req.status == 200) {
+				create_and_join_session();
+			}
+		}
+
 		heartbeat_req.open("POST", "https://loudly-verified-elephant.edgecompute.app/heartbeat", true);
 		heartbeat_req.responseType = "text";
 		heartbeat_req.setRequestHeader("sessionid",Game.sessionId);
@@ -337,12 +350,22 @@ function GetFrame() {
 	function create_and_join_session() {
 		var xhttp = new XMLHttpRequest();
 		xhttp.onload = function(oEvent) {
-			var parts = xhttp.response.split(',');
-			Game.sessionId = parts[0];
-			Game.playerIndex = parts[1];
-			Game.pop = parts[2];
-			Game.lastTick = performance.now();
-			main(performance.now());
+			if (xhttp.status == 200) {
+				var parts = xhttp.response.split(',');
+				Game.sessionId = parts[0];
+				Game.playerIndex = parts[1];
+				Game.pop = parts[2];
+				Game.lastTick = performance.now();
+				Game.started = true;
+				document.getElementById('controlsbutton').style.display = 'block';
+				document.getElementById('waiting').style.display = 'none';
+				main(performance.now());
+			} else {
+				Game.started = false;
+				document.getElementById('controlsbutton').style.display = 'none';
+				document.getElementById('waiting').style.display = 'block';
+				main(performance.now());
+			}
 		};
 		xhttp.open("POST", "https://loudly-verified-elephant.edgecompute.app/create_and_join_session", true);
 		xhttp.responseType = "text";
