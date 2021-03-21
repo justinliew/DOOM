@@ -48,8 +48,18 @@ Player Name <input id="player_name" value="" />
 </div>
 
 <style>
+body {
+	margin: 0;
+}
+
 div {
     white-space: pre-wrap;
+}
+
+canvas { 
+	width: 100%; 
+	max-width: 960px; 
+	margin: 0 auto; 
 }
 
 table {
@@ -129,6 +139,7 @@ var Game = {
 	numframes: 0,
 	lastTick: 0,
 	lastRender: 0,
+	countdown: 0,
 
 	maxposttimes: 100,
 	posttimes: [100],
@@ -398,6 +409,7 @@ function join_session(id) {
 	function lobby_heartbeat() {
 		var heartbeat_req = new XMLHttpRequest();
 		heartbeat_req.onload = function(oEvent) {
+			Game.countdown = 30;
 			if (!Game.started && heartbeat_req.status == 200) {
 				join_best_session();
 			}
@@ -408,6 +420,12 @@ function join_session(id) {
 		heartbeat_req.setRequestHeader("playerid",Game.playerId);
 		heartbeat_req.send();
 		refresh_sessions();
+	}
+
+	function lobby_counter() {
+		Game.countdown -= 1;
+		var el = document.getElementById('waiting');
+		waiting.innerText = "Too many players; retrying in " + Game.countdown + " seconds.";
 	}
 
 	function init_user() {
@@ -432,6 +450,8 @@ function join_session(id) {
 			update_name_in_session();
 		}
 		setInterval(lobby_heartbeat, 1000 * 30); // 30s interval
+		Game.countdown = 30;
+		setInterval(lobby_counter, 1000); // 1s interval
 	}
 
 	function join_best_session() {

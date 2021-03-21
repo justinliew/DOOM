@@ -41,8 +41,19 @@ Too Many Players; please wait.
 </div>
 
 <style>
+body {
+	margin: 0;
+	background: black;
+}
+
 div {
     white-space: pre-wrap;
+}
+
+canvas { 
+	width: 100%; 
+	max-width: 960px; 
+	margin: 0 auto; 
 }
 
 table {
@@ -122,6 +133,7 @@ var Game = {
 	numframes: 0,
 	lastTick: 0,
 	lastRender: 0,
+	countdown: 0,
 
 	maxposttimes: 100,
 	posttimes: [100],
@@ -317,6 +329,7 @@ function GetFrame() {
 	function lobby_heartbeat() {
 		var heartbeat_req = new XMLHttpRequest();
 		heartbeat_req.onload = function(oEvent) {
+			Game.countdown = 30;
 			if (!Game.started && heartbeat_req.status == 200) {
 				create_and_join_session();
 			}
@@ -327,6 +340,12 @@ function GetFrame() {
 		heartbeat_req.setRequestHeader("sessionid",Game.sessionId);
 		heartbeat_req.setRequestHeader("playerid",Game.playerId);
 		heartbeat_req.send();
+	}
+
+	function lobby_counter() {
+		Game.countdown -= 1;
+		var el = document.getElementById('waiting');
+		waiting.innerText = "Too many players; retrying in " + Game.countdown + " seconds.";
 	}
 
 	function init_user() {
@@ -345,6 +364,8 @@ function GetFrame() {
 			document.cookie = "playername="+playername;
 		}
 		setInterval(lobby_heartbeat, 1000 * 30); // 30s interval
+		Game.countdown = 30;
+		setInterval(lobby_counter, 1000); // 1s interval
 	}
 
 	function create_and_join_session() {
