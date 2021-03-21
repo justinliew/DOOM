@@ -497,6 +497,13 @@ X_ProcessIncoming(void)
 	memcpy(&sessionid, bodybuf, sizeof(int));
 	sessionid = ntohl(sessionid);
 
+	// range will be 100001 - 1000001, odd from doomlobby
+	// if it is outside this range, reject this
+	if (sessionid < 100001 || sessionid > 1000001 || ((sessionid % 2) == 0) ) {
+		printf("We got an invalid session id of %d; rejecting\n", sessionid);
+		return 0;
+	}
+
 	memcpy(&global, &bodybuf[4], 1);
 
 	int cache_len = 0;
@@ -656,6 +663,10 @@ D_DoomLoop(void)
 
 	clock_t start=clock();
 	int num_frames = X_ProcessIncoming();
+	if (num_frames == 0) {
+		return;
+	}
+
 	clock_t end=clock();
 	printf("X_ProcessIncoming took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 
