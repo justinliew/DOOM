@@ -450,6 +450,7 @@ R_InitTextures(void)
 	temp1 = W_GetNumForName("S_START"); // P_???????
 	temp2 = W_GetNumForName("S_END") - 1;
 	temp3 = ((temp2 - temp1 + 63) / 64) + ((numtextures + 63) / 64);
+#ifndef QUIET_XQD
 	printf("[");
 	for (i = 0; i < temp3; i++)
 		printf(" ");
@@ -457,10 +458,13 @@ R_InitTextures(void)
 	for (i = 0; i < temp3; i++)
 		printf("\x8");
 	printf("\x8\x8\x8\x8\x8\x8\x8\x8\x8\x8");
+#endif
 
 	for (i = 0; i < numtextures; i++, directory++) {
+#ifndef QUIET_XQD
 		if (!(i & 63))
 			printf(".");
+#endif
 
 		if (i == numtextures1) {
 			// Start looking in second texture file.
@@ -565,8 +569,10 @@ R_InitSpriteLumps(void)
 	spritetopoffset = Z_Malloc(numspritelumps * 8, PU_STATIC, 0);
 
 	for (i = 0; i < numspritelumps; i++) {
+#ifndef QUIET_XQD
 		if (!(i & 63))
 			printf(".");
+#endif
 
 		patch = W_CacheLumpNum(firstspritelump + i, PU_CACHE);
 		spritewidth[i] = SHORT(patch->width) << FRACBITS;

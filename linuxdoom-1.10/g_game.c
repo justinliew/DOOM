@@ -1583,11 +1583,7 @@ G_InitNew
 	    break;
 	} 
  
-	clock_t loadstart = clock();
-	printf("G_DoLoadLevel start\n");
     G_DoLoadLevel (); 
-	clock_t loadend = clock();
-	printf("G_DoLoadLevel: %f\n", 1000.0*(double)(loadend-loadstart) / CLOCKS_PER_SEC);
 } 
  
 

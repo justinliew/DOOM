@@ -41,10 +41,7 @@ main
     myargc = argc; 
     myargv = argv; 
  
-	clock_t start = clock();
-    D_DoomMain (); 
-	clock_t end = clock();
-	printf("MAIN: %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
+    D_DoomMain ();
 
     return 0;
 } 

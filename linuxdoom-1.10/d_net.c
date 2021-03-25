@@ -599,9 +599,10 @@ void D_CheckNetGame (int playerindex)
     if (netgame)
 	D_ArbitrateNetStart ();
 
+#ifndef QUIET_XQD
     printf ("startskill %i  deathmatch: %i  startmap: %i  startepisode: %i\n",
 	    startskill, deathmatch, startmap, startepisode);
-	
+#endif
     // read values out of doomcom
     ticdup = doomcom->ticdup;
     maxsend = BACKUPTICS/(2*ticdup)-1;
@@ -613,9 +614,10 @@ void D_CheckNetGame (int playerindex)
     for (i=0 ; i<doomcom->numnodes ; i++)
 	nodeingame[i] = true;
 	
+#ifndef QUIET_XQD
     printf ("player %i of %i (%i nodes)\n",
 	    consoleplayer+1, doomcom->numplayers, doomcom->numnodes);
-
+#endif
 }
 
 

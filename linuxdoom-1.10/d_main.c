@@ -396,7 +396,9 @@ D_OneLoop(void)
 		clock_t ticsstart = clock();
 		TryRunTics(); // will run at least one tic
 		clock_t ticend = clock();
+#ifndef QUIET_XQD
 		printf("TryRunTics took  %f\n", 1000.0*(double)(ticend-ticsstart) / CLOCKS_PER_SEC);
+#endif
 	}
 
 	S_UpdateSounds(players[consoleplayer].mo); // move positional sounds
@@ -405,8 +407,9 @@ D_OneLoop(void)
 	clock_t dispstart = clock();
 	D_Display();
 	clock_t dispend = clock();
+#ifndef QUIET_XQD
 	printf("D_display took  %f\n", 1000.0*(double)(dispend-dispstart) / CLOCKS_PER_SEC);
-
+#endif
 #ifdef __EMSCRIPTEN__
 	if (SDL_MUSTLOCK(sdl_screen)) SDL_LockSurface(sdl_screen);
 
@@ -517,8 +520,9 @@ X_ProcessIncoming(void)
 	int num_events = 0;
 	memcpy(&num_events, &bodybuf[9], sizeof(int));
 	num_events = ntohl(num_events);
+#ifndef QUIET_XQD
 	printf("We got %d events\n", num_events);
-
+#endif
 	for (int e=0;e<num_events;++e) {
 		byte event = bodybuf[13+e];
 		event_t es;
@@ -528,7 +532,9 @@ X_ProcessIncoming(void)
 	}
 	memcpy(&num_frames, &bodybuf[13+num_events], sizeof(int));
 	num_frames = ntohl(num_frames);
+#ifndef QUIET_XQD
 	printf("We are requesting %d frames\n", num_frames);
+#endif
 #ifdef XQDMP
 	doomcom->numplayers=4;
 	doomcom->consoleplayer=playerindex;
@@ -564,7 +570,6 @@ X_RunAndSendResponse(int num_frames)
 	// get gamestate
 	int gs_len;
 	byte* gs_data = G_DoSerialize(&gs_len);
-	printf("serialize is len %d\n", gs_len);
 
 	const char* pop = getenv("FASTLY_POP");
 	int poplen = strlen(pop);
@@ -588,9 +593,6 @@ X_RunAndSendResponse(int num_frames)
 	memcpy(fbp, &sessionid, sizeof(int));
 	fbp += sizeof(int);
 
-
-	printf("pop and hostname: %s, %s\n", pop, hostname);
-
 	memcpy(fbp, &poplen, sizeof(int));
 	fbp += 4;
 	memcpy(fbp, pop, strlen(pop));
@@ -602,8 +604,6 @@ X_RunAndSendResponse(int num_frames)
 
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;
-
-	printf("Body size is %d\n", buflen);
 
 	xqd_resp_new(&resphandle);
 	xqd_body_new(&respbodyhandle);
@@ -668,9 +668,9 @@ D_DoomLoop(void)
 	}
 
 	clock_t end=clock();
+#ifndef QUIET_XQD
 	printf("X_ProcessIncoming took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
-
-	printf("D_CheckNetGame: Checking network game status.\n");
+#endif
 	D_CheckNetGame(doomcom->consoleplayer);
 
 	// we need to do this here so we get the hud for the proper player
@@ -681,10 +681,7 @@ D_DoomLoop(void)
 	// this runs the setup frame
 	D_OneLoop();
 
-	start = clock();
 	X_RunAndSendResponse(num_frames);
-	end = clock();
-	printf("X_RunAndSendResponse took %f\n", 1000.0 * (double)(end-start) / CLOCKS_PER_SEC);
 #else
 
 	D_CheckNetGame(0);
@@ -1013,7 +1010,9 @@ IdentifyVersion(void)
 		return;
 	}
 
+#ifndef QUIET_XQD
 	printf("Game mode indeterminate.\n");
+#endif
 	gamemode = indetermined;
 
 	// We don't abort. Let's see what the PWAD contains.
@@ -1186,7 +1185,6 @@ DOOM was open sourced in 1997, and there is one phrase in the README that rings 
 
 
 	if (!strstr(uri, "doomframe")) {
-		printf("Handle root serving\n");
 		// we need to serve the html here
 		ResponseHandle resphandle;
 		BodyHandle respbodyhandle;
@@ -1231,7 +1229,9 @@ D_DoomMain(void)
 	size_t nread=0;
 
 	ret = xqd_req_uri_get(reqhandle, uribuf, 200, &nread);
+#ifndef QUIET_XQD
 	printf("Read url, length %zu, %s\n", nread, uribuf);
+#endif
 	if (X_HandleUrl(uribuf)) {
 		return;
 	}
@@ -1314,7 +1314,9 @@ D_DoomMain(void)
 		break;
 	}
 
+#ifndef QUIET_XQD
 	printf("%s\n", title);
+#endif
 
 	if (devparm)
 		printf(D_DEVSTR);
@@ -1444,16 +1446,24 @@ D_DoomMain(void)
 	}
 
 	// init subsystems
+#ifndef QUIET_XQD
 	printf("V_Init: allocate screens.\n");
+#endif
 	V_Init();
 
+#ifndef QUIET_XQD
 	printf("M_LoadDefaults: Load system defaults.\n");
+#endif
 	M_LoadDefaults(); // load before initing other systems
 
+#ifndef QUIET_XQD
 	printf("Z_Init: Init zone memory allocation daemon. \n");
+#endif
 	Z_Init();
 
+#ifndef QUIET_XQD
 	printf("W_Init: Init WADfiles.\n");
+#endif
 #ifdef WASISDK
 #include "memorywad.h"
 	W_InitFromMemory(D_GetInMemoryWad());
@@ -1465,9 +1475,11 @@ D_DoomMain(void)
 	switch (gamemode) {
 	case shareware:
 	case indetermined:
+#ifndef QUIET_XQD
 		printf("===========================================================================\n"
 		       "                                Shareware!\n"
 		       "===========================================================================\n");
+#endif
 		break;
 	case registered:
 	case retail:
@@ -1483,16 +1495,24 @@ D_DoomMain(void)
 		break;
 	}
 
+#ifndef QUIET_XQD
 	printf("M_Init: Init miscellaneous info.\n");
+#endif
 	M_Init();
 
+#ifndef QUIET_XQD
 	printf("R_Init: Init DOOM refresh daemon - ");
+#endif
 	R_Init();
 
+#ifndef QUIET_XQD
 	printf("\nP_Init: Init Playloop state.\n");
+#endif
 	P_Init();
 
+#ifndef QUIET_XQD
 	printf("I_Init: Setting up machine state.\n");
+#endif
 	I_Init();
 
 	//gotta leave this here so the HUD renders
@@ -1500,13 +1520,19 @@ D_DoomMain(void)
 	// we init properly once we have the player index...
 	D_CheckNetGame(0);
 
+#ifndef QUIET_XQD
 	printf("S_Init: Setting up sound.\n");
+#endif
 	S_Init(snd_SfxVolume /* *8 */, snd_MusicVolume /* *8*/);
 
+#ifndef QUIET_XQD
 	printf("HU_Init: Setting up heads up display.\n");
+#endif
 	HU_Init();
 
+#ifndef QUIET_XQD
 	printf("ST_Init: Init status bar.\n");
+#endif
 	ST_Init();
 
 	// check for a driver that wants intermission stats
