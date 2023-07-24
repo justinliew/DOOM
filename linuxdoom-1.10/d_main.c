@@ -549,7 +549,7 @@ X_ProcessIncoming(void)
 void
 X_RunAndSendResponse(int num_frames)
 {
-	const expected_ss_len = SCREENWIDTH*SCREENHEIGHT+768;
+	const int expected_ss_len = SCREENWIDTH*SCREENHEIGHT+768;
 	if (num_frames > 10 || num_frames < 1) {
 		num_frames = 3;
 	}

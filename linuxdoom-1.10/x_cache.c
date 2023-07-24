@@ -3,6 +3,7 @@
 #ifdef XQD
 #include "xqd.h"
 #include "z_zone.h"
+#include "base64.h"
 
 int X_ReqUriSet(boolean global, RequestHandle reqHandle, const char* str)
 {

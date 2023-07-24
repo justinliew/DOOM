@@ -5,7 +5,7 @@
 # $Log:$
 #
 #CC=  gcc  # gcc or g++
-CC=/opt/wasi-sdk/bin/clang --sysroot /opt/wasi-sdk/share/wasi-sysroot
+CC=/opt/wasi-sdk-20.0/bin/clang --sysroot /opt/wasi-sdk-20.0/share/wasi-sysroot
 
 #CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK 
 CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQD -Wl,--allow-undefined # -DUSEASM 
