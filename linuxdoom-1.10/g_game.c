@@ -1257,6 +1257,8 @@ void G_DoDeserialize (byte* data, int length)
     int		i; 
     int		a,b,c; 
     char	vcheck[VERSIONSIZE]; 
+
+    if (length == 0) return;
 	 
     gameaction = ga_nothing; 
 	 
@@ -1292,7 +1294,6 @@ void G_DoDeserialize (byte* data, int length)
     c = *save_p++; 
     leveltime = (a<<16) + (b<<8) + c; 
 
-	clock_t tick = clock();
     // dearchive all the modifications
     P_UnArchivePlayers (); 
     P_UnArchiveWorld (); 
