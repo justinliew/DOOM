@@ -8,7 +8,7 @@
 CC=/opt/wasi-sdk-20.0/bin/clang --sysroot /opt/wasi-sdk-20.0/share/wasi-sysroot
 
 #CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK 
-CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQD -Wl,--allow-undefined # -DUSEASM 
+CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQD -Wl,--allow-undefined -lwasi-emulated-process-clocks # -DUSEASM 
 #CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQDMP -DXQD -Wl,--allow-undefined # -DUSEASM 
 LDFLAGS=
 LIBS=-lm 
