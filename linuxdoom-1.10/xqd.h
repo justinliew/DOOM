@@ -36,6 +36,50 @@ typedef enum BodyWriteEnd {
     BodyWriteEndFront = 1,
 } BodyWriteEnd;
 
+typedef struct {
+    uint32_t mask;
+} CacheLookupOptionsMask;
+
+typedef struct {
+    RequestHandle request_headers;
+} CacheLookupOptions;
+
+typedef struct {
+    uint32_t handle;
+} CacheHandle;
+
+typedef struct {
+    uint32_t state;
+} CacheLookupState;
+
+
+typedef struct {
+    uint64_t max_age_ns;
+    RequestHandle request_headers;
+    byte* vary_rule_ptr;
+    size_t vary_rule_len;
+    uint64_t initial_age_ns;
+    uint64_t stale_while_revalidate_ns;
+    byte* surrogate_keys_ptr;
+    size_t surrogate_keys_len;
+    uint64_t length;
+    byte* user_metadata_ptr;
+    size_t user_metadata_len;
+} CacheWriteOptions;
+
+typedef struct {
+    uint32_t mask;
+} CacheWriteOptionsMask;
+
+typedef struct {
+    uint64_t from;
+    uint64_t to;
+} CacheGetBodyOptions;
+
+typedef struct {
+    uint32_t mask;
+} CacheGetBodyOptionsMask;
+
 #define CACHE_OVERRIDE_NONE (0u)
 #define CACHE_OVERRIDE_PASS (1u<<0)
 #define CACHE_OVERRIDE_TTL (1u<<1)
@@ -162,6 +206,27 @@ int xqd_log_write(LogEndpointHandle endpoint_handle, const char* msg, size_t msg
                   size_t *nwritten);
 
 int xqd_req_original_header_count(uint32_t *count);
+
+__attribute__((import_module("fastly_cache")))
+int lookup(const char* cache_key, size_t cache_key_len, CacheLookupOptionsMask options_mask, CacheLookupOptions *options, CacheHandle *handle_out);
+
+__attribute__((import_module("fastly_cache")))
+int insert(const char* cache_key, size_t cache_key_len, CacheWriteOptionsMask options_mask, CacheWriteOptions *options, BodyHandle *body_handle_out);
+
+__attribute__((import_module("fastly_cache")))
+int get_state(CacheHandle handle, CacheLookupState *lookup_state_out);
+
+__attribute__((import_module("fastly_cache")))
+int get_body(CacheHandle handle, CacheGetBodyOptionsMask mask, CacheGetBodyOptions* options, BodyHandle *handle_out);
+
+__attribute__((import_module("fastly_http_body")))
+__attribute__((import_name("write")))
+int write_body_handle(BodyHandle body_handle, byte* buf, size_t buf_len, BodyWriteEnd end, size_t *written);
+
+__attribute__((import_module("fastly_http_body")))
+__attribute__((import_name("close")))
+int close_body_handle(BodyHandle body_handle);
+
 
 #ifdef __cplusplus
 }
