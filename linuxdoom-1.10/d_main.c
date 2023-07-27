@@ -634,8 +634,8 @@ X_RunAndSendResponse(int num_frames)
 	const char* vary_header_value = "Origin";
 	xqd_resp_header_append(resphandle, vary_header_name, strlen(vary_header_name), vary_header_value, strlen(vary_header_value) );
 
-	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 	X_WriteStateToCache(global, sessionid, gs_data, gs_len);
+	int response_res = xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
 }
 #endif
 

@@ -5,79 +5,100 @@
 #include "z_zone.h"
 #include "base64.h"
 
-int X_ReqUriSet(boolean global, RequestHandle reqHandle, const char* str)
-{
-	const char* globaluri = "http://kv-global.vranish.dev/%s";
-	const char* popuri = "http://kv.vranish.dev/%s";
-	const char* uriformat = global ? globaluri : popuri;
-	char uri[256];
-	snprintf(uri, 256, uriformat, str);
-	int res = xqd_req_uri_set(reqHandle, uri, strlen(uri));
-	printf("X_GetStateFromCache::xqd_req_uri_set returned %d for %s\n", res, uri);
-	return res;
-}
-
-const char* X_GetUriName(boolean global)
-{
-	const char* globalname = "kvglobal";
-	const char* popname = "kvlocal";
-	const char* name = global ? globalname : popname;
-	return name;
-}
+const int CacheLookupState_Found = 1 << 0; // 1
+const int CacheLookupState_Usable = 1 << 1; // 2
+const int CacheLookupState_Stale = 1 << 2; // 4
+const int CacheLookupState_MustInsertOrUpdate = 1 << 3; // 8
+const int CacheWriteOptionsMask_RequestHeaders = 1 << 1;
+const int CacheWriteOptionsMask_VaryRule = 1 << 2;
+const int CacheWriteOptionsMask_InitialAgeNs = 1 << 3;
+const int CacheWriteOptionsMask_StaleWhileRevalidateNs = 1 << 4;
+const int CacheWriteOptionsMask_SurrogateKeys = 1 << 5;
+const int CacheWriteOptionsMask_Length = 1 << 6;
+const int CacheWriteOptionsMask_UserMetadata = 1 << 7;
+const int CacheWriteOptionsMask_SensitiveData = 1 << 8;
+const int CacheGetBodyOptionsMask_From = 1 << 1;
+const int CacheGetBodyOptionsMask_To = 1 << 2;
 
 byte*
 X_GetStateFromCache(boolean global, int stateId, int* outlen)
 {
-	RequestHandle reqHandle;
-	BodyHandle bodyHandle, respBodyHandle;
-	int res = xqd_req_new(&reqHandle);
-	res = xqd_body_new(&bodyHandle);
 	char stateString[256];
 	snprintf(stateString, 256, "%d", stateId);
-	printf("X_GetStateFromCache with session %d\n", stateId);
-	X_ReqUriSet(global, reqHandle, stateString);
-	const char* name = X_GetUriName(global);
+	CacheHandle cache_handle;
 
-	ResponseHandle respHandle;
-	res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, &respBodyHandle );
+	// do a lookup
+	CacheLookupOptionsMask lookup_mask = {0};
+	int ret = lookup(stateString, strlen(stateString), lookup_mask, NULL, &cache_handle);
 
-	byte* buf = Z_Malloc(50000,PU_STATIC,0);
-	int bodyindex=0;
-	int nread;
-	do {
-		int ret = xqd_body_read(respBodyHandle, buf+bodyindex, 50000-bodyindex, &nread);
-		bodyindex += nread;
-	} while (nread > 0 && bodyindex < 50000);
+	CacheLookupState lookup_state;
+	ret = get_state(cache_handle, &lookup_state);
 
-	printf("X_GetStateFromCache read returned %d, nread: %d\n", res, bodyindex);
+	if (lookup_state.state & CacheLookupState_Found) {
+		CacheGetBodyOptionsMask mask = {0};
+		BodyHandle body_handle = {0};
+		ret = get_body(cache_handle, mask, NULL, &body_handle);
 
-	*outlen = bodyindex;
-	return buf;
+		byte* buf = Z_Malloc(50000,PU_STATIC,0);
+		int bodyindex=0;
+		int nread;
+		do {
+			int ret = xqd_body_read(body_handle, buf+bodyindex, 50000-bodyindex, &nread);
+			bodyindex += nread;
+		} while (nread > 0 && bodyindex < 50000);
+
+		*outlen = bodyindex;
+		return buf;
+	} else {
+		*outlen = 0;
+		return NULL;
+	}
+}
+
+int64_t ms_to_ns(int64_t ms) {
+	return ms * 1000000;
+}
+
+int64_t s_to_ns(int64_t s) {
+	return ms_to_ns(s*1000);
 }
 
 void
 X_WriteStateToCache(boolean global, int stateId, byte* state, int len)
 {
-	RequestHandle reqHandle;
-	BodyHandle bodyHandle;
-	int res = xqd_req_new(&reqHandle);
-	res = xqd_body_new(&bodyHandle);
-
 	char stateString[256];
 	snprintf(stateString, 256, "%d", stateId);
-	X_ReqUriSet(global, reqHandle, stateString);
-	const char* name = X_GetUriName(global);
+	CacheHandle cache_handle;
 
-	int b64len;
-	byte* b64state = base64_encode(state, len, &b64len);
-	res = xqd_req_header_append(reqHandle, "do-post-base64", strlen("do-post-base64"), b64state, b64len);
+	// do a lookup
+	CacheLookupOptionsMask lookup_mask = {0};
+	int ret = lookup(stateString, strlen(stateString), lookup_mask, NULL, &cache_handle);
 
-	res = xqd_req_method_set(reqHandle, "POST", strlen("POST"));
+	CacheLookupState lookup_state;
+	ret = get_state(cache_handle, &lookup_state);
 
-	ResponseHandle respHandle;
+	if (lookup_state.state == 0 || lookup_state.state & CacheLookupState_Stale) {
+		CacheWriteOptionsMask write_mask = {0};
+		write_mask.mask = CacheWriteOptionsMask_Length | CacheWriteOptionsMask_StaleWhileRevalidateNs;
+		CacheWriteOptions write_options = {0};
+		write_options.max_age_ns =  0;
+		write_options.stale_while_revalidate_ns = s_to_ns(30);
+		write_options.length = len;
 
-	res = xqd_req_send(reqHandle, bodyHandle, name, strlen(name), &respHandle, NULL );
-	printf("X_WriteStateToCache::xqd_req_send returned %d; wrote %d bytes (encoded from %d bytes)\n", res, b64len, len);
+		BodyHandle body_handle = {0};
+		ret = insert(stateString, strlen(stateString), write_mask, &write_options, &body_handle);
+		fflush(stdout);
+
+		size_t total_written = 0;
+		while (total_written < len) {
+			size_t written = 0;
+			ret = write_body_handle(body_handle, &state[total_written], len-total_written, 0, &written); 
+			total_written += written;
+			if (ret != 0) break;
+		}
+
+		ret = close_body_handle(body_handle);
+	}
 }
 
 /*
