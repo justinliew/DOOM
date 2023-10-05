@@ -297,29 +297,13 @@ void G_BuildTiccmd (ticcmd_t* cmd)
     else 
     { 
         if (gamekeydown[key_right])
-#ifdef WASISDK 
-            cmd->angleturn -= angleturn[tspeed]/2; 
-#else
             cmd->angleturn -= angleturn[tspeed]; 
-#endif
         if (gamekeydown[key_left]) 
-#ifdef WASISDK 
-            cmd->angleturn += angleturn[tspeed]/2; 
-#else
             cmd->angleturn += angleturn[tspeed]; 
-#endif
         if (joyxmove > 0) 
-#ifdef WASISDK 
-            cmd->angleturn -= angleturn[tspeed]/2; 
-#else
             cmd->angleturn -= angleturn[tspeed]; 
-#endif
         if (joyxmove < 0) 
-#ifdef WASISDK 
-            cmd->angleturn += angleturn[tspeed]/2; 
-#else
             cmd->angleturn += angleturn[tspeed]; 
-#endif
     } 
  
     if (gamekeydown[key_up]) 

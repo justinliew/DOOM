@@ -370,6 +370,10 @@ int      gametime;
 
 void NetUpdate (boolean force_new_tic)
 {
+#ifdef WASISDK
+	if (!force_new_tic)
+		return;
+#endif
     int             nowtime;
     int             newtics;
     int				i,j;
@@ -759,6 +763,9 @@ void TryRunTics (void)
     }
     
     // run the count * ticdup dics
+#ifdef WASISDK
+	counts = 1;
+#endif
     while (counts--)
     {
 	for (i=0 ; i<ticdup ; i++)
