@@ -162,13 +162,13 @@ void P_MovePlayer (player_t* player)
 	// This needs proper root cause analysis
     if (cmd->forwardmove && onground)
 #ifdef WASISDK
-	P_Thrust (player, player->mo->angle, cmd->forwardmove*1024);
+	P_Thrust (player, player->mo->angle, cmd->forwardmove*512);
 #else
 	P_Thrust (player, player->mo->angle, cmd->forwardmove*2048);
 #endif    
     if (cmd->sidemove && onground)
 #ifdef WASISDK
-	P_Thrust (player, player->mo->angle-ANG90, cmd->sidemove*1024);
+	P_Thrust (player, player->mo->angle-ANG90, cmd->sidemove*512);
 #else
 	P_Thrust (player, player->mo->angle-ANG90, cmd->sidemove*2048);
 #endif    

@@ -300,7 +300,11 @@ void P_UnArchiveThinkers (void)
 	    memcpy (mobj, save_p, sizeof(*mobj));
 	    save_p += sizeof(*mobj);
 	    mobj->state = &states[(int)mobj->state];
+		// we can't clear the target on reload since we do this every frame
+		// and so the AI loses their target constantly
+#ifndef WASISDK
 	    mobj->target = NULL;
+#endif
 	    if (mobj->player)
 	    {
 		mobj->player = &players[(int)mobj->player-1];
