@@ -46,8 +46,14 @@ Player Name <input id="player_name" value="" />
 <div>
 <table id="sessions_table"></table>
 </div>
+<div id="version">
+</div>
 
 <style>
+#version {
+	color: white;
+}
+
 body {
 	margin: 0;
 }
@@ -140,6 +146,7 @@ var Game = {
 	lastTick: 0,
 	lastRender: 0,
 	countdown: 0,
+	version: 0,
 
 	maxposttimes: 100,
 	posttimes: [100],
@@ -294,6 +301,10 @@ function GetFrame() {
 			var hostlen = dv.getInt32(12+num_frames*frame_len + poplen,true);
 			var hostarray = new Uint8Array(arraybuffer.slice(16+num_frames*frame_len + poplen,16+num_frames*frame_len + poplen + hostlen));
 			Game.host = new TextDecoder("utf-8").decode(hostarray);
+
+			var version = dv.getInt32(16+num_frames*frame_len + poplen + hostlen,true);
+			Game.version = version;
+			document.getElementById('version').innerHTML = version;
 
 			Game.startpost = true;
 		}

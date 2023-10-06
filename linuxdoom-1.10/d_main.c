@@ -576,8 +576,11 @@ X_RunAndSendResponse(int num_frames)
 	const char* hostname = getenv("FASTLY_HOSTNAME");
 	int hostlen = strlen(hostname);
 
-	// framebuffer * num_frames, num_frames, stateid
-	int buflen = expected_ss_len*num_frames + 4*sizeof(int) + poplen + hostlen;
+	const char* version_str = getenv("FASTLY_SERVICE_VERSION");
+	int version = atoi(version_str);
+
+	// num_frames, [frames], sessionid, poplen, pop, hostlen, host, version
+	int buflen = expected_ss_len*num_frames + 5*sizeof(int) + poplen + hostlen;
 	byte* finalbuffer = Z_Malloc(buflen, PU_LEVEL, 0);
 	byte* fbp = finalbuffer;
 
@@ -601,6 +604,9 @@ X_RunAndSendResponse(int num_frames)
 	fbp += 4;
 	memcpy(fbp, hostname, strlen(hostname));
 	fbp += strlen(hostname);
+
+	memcpy(fbp, &version, sizeof(int));
+	fbp += 4;
 
 	ResponseHandle resphandle;
 	BodyHandle respbodyhandle;

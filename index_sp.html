@@ -35,6 +35,8 @@
 <div id="controlsbutton">
 <button onClick="showControlsOverlay();">Show Controls</button>
 </div>
+<div id="version">
+</div>
 
 <div id="waiting">
 Too Many Players; please wait.
@@ -47,6 +49,10 @@ body {
 }
 
 #waiting {
+	color: white;
+}
+
+#version {
 	color: white;
 }
 
@@ -131,6 +137,7 @@ var Game = {
 	globalpop: false,
 	pop: "",
 	host: "",
+	version: 0,
 	startpost: true,
 	keys: {},
 	frames: {},
@@ -289,6 +296,11 @@ function GetFrame() {
 			var hostlen = dv.getInt32(12+num_frames*frame_len + poplen,true);
 			var hostarray = new Uint8Array(arraybuffer.slice(16+num_frames*frame_len + poplen,16+num_frames*frame_len + poplen + hostlen));
 			Game.host = new TextDecoder("utf-8").decode(hostarray);
+
+			var version = dv.getInt32(16+num_frames*frame_len + poplen + hostlen,true);
+			Game.version = version;
+			document.getElementById('version').innerHTML = version;
+
 
 			Game.startpost = true;
 		}
