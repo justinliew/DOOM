@@ -301,13 +301,13 @@ static anim_t *anims[NUMEPISODES] =
 
 
 // used to accelerate or skip a stage
-static int		acceleratestage;
+int		acceleratestage;
 
 // wbs->pnum
 static int		me;
 
  // specifies current state
-static stateenum_t	state;
+stateenum_t	state = StatCount;
 
 // contains information passed into intermission
 static wbstartstruct_t*	wbs;
@@ -315,7 +315,7 @@ static wbstartstruct_t*	wbs;
 static wbplayerstruct_t* plrs;  // wbs->plyr[]
 
 // used for general timing
-static int 		cnt;  
+int 		cnt = 0;  
 
 // used for timing of background animation
 static int 		bcnt;
@@ -323,12 +323,12 @@ static int 		bcnt;
 // signals to refresh everything for one frame
 static int 		firstrefresh; 
 
-static int		cnt_kills[MAXPLAYERS];
-static int		cnt_items[MAXPLAYERS];
-static int		cnt_secret[MAXPLAYERS];
-static int		cnt_time;
-static int		cnt_par;
-static int		cnt_pause;
+int		cnt_kills[MAXPLAYERS] = {0,0,0,0};
+int		cnt_items[MAXPLAYERS] = {0,0,0,0};
+int		cnt_secret[MAXPLAYERS] = {0,0,0,0};
+int		cnt_time = -1;
+int		cnt_par = -1;
+int		cnt_pause = TICRATE;
 
 // # of commercial levels
 static int		NUMCMAPS; 
@@ -720,7 +720,7 @@ WI_drawTime
     }
 }
 
-
+extern gameaction_t serialized_gameaction;
 void WI_End(void)
 {
     void WI_unloadData(void);
@@ -738,7 +738,7 @@ void WI_updateNoState(void) {
 
     WI_updateAnimatedBack();
 
-    if (!--cnt)
+//    if (!--cnt)
     {
 	WI_End();
 	G_WorldDone();
@@ -1313,16 +1313,18 @@ void WI_drawNetgameStats(void)
 
 }
 
-static int	sp_state;
+int	sp_state = 1;
 
 void WI_initStats(void)
 {
-    state = StatCount;
-    acceleratestage = 0;
-    sp_state = 1;
-    cnt_kills[0] = cnt_items[0] = cnt_secret[0] = -1;
-    cnt_time = cnt_par = -1;
-    cnt_pause = TICRATE;
+#ifndef XQD
+   state = StatCount;
+   acceleratestage = 0;
+   sp_state = 1;
+   cnt_kills[0] = cnt_items[0] = cnt_secret[0] = -1;
+   cnt_time = cnt_par = -1;
+   cnt_pause = TICRATE;
+#endif
 
     WI_initAnimatedBack();
 }

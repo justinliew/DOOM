@@ -94,8 +94,22 @@ void	G_DoVictory (void);
 void	G_DoWorldDone (void); 
 void	G_DoSaveGame (void); 
  
- 
+// stuff for intermission
+extern int sp_state;
+extern int		cnt_kills[MAXPLAYERS];
+extern int		cnt_items[MAXPLAYERS];
+extern int		cnt_secret[MAXPLAYERS];
+extern int		cnt_time;
+extern int		cnt_par;
+extern int		cnt_pause;
+extern stateenum_t	state;
+extern int acceleratestage;
+extern int cnt;
+
+
 gameaction_t    gameaction; 
+// for state changes where we need to run the game action every frame on XQD
+gameaction_t    serialized_gameaction;
 gamestate_t     gamestate; 
 skill_t         gameskill; 
 boolean		respawnmonsters;
@@ -1021,8 +1035,11 @@ void G_SecretExitLevel (void)
 void G_DoCompleted (void) 
 { 
     int             i; 
-	 
-    gameaction = ga_nothing; 
+
+   // for completed, the regular game only runs this once, but we need
+   // to run it every time to keep the timers properly ticking
+   serialized_gameaction = ga_completed;
+   gameaction = ga_nothing; 
  
     for (i=0 ; i<MAXPLAYERS ; i++) 
 	if (playeringame[i]) 
@@ -1148,6 +1165,7 @@ void G_DoCompleted (void)
 void G_WorldDone (void) 
 { 
     gameaction = ga_worlddone; 
+    serialized_gameaction = ga_worlddone;
 
     if (secretexit) 
 	players[consoleplayer].didsecret = true; 
@@ -1280,6 +1298,7 @@ void G_DoDeserialize (byte* data, int length)
     gameskill = *save_p++; 
     gameepisode = *save_p++; 
     gamemap = *save_p++; 
+    wminfo.next = *save_p++;
     for (i=0 ; i<MAXPLAYERS ; i++)
 	playeringame[i] = *save_p++; 
 
@@ -1293,6 +1312,25 @@ void G_DoDeserialize (byte* data, int length)
     b = *save_p++; 
     c = *save_p++; 
     leveltime = (a<<16) + (b<<8) + c; 
+    menuactive = *save_p++;
+    gamestate = *save_p++;
+    gameaction = *save_p++;
+    sp_state = *save_p++;
+    for (int i=0;i<MAXPLAYERS;++i) {
+        cnt_kills[i] = *save_p++;
+    }
+    for (int i=0;i<MAXPLAYERS;++i) {
+        cnt_items[i] = *save_p++;
+    }
+    for (int i=0;i<MAXPLAYERS;++i) {
+        cnt_secret[i] = *save_p++;
+    }
+    cnt_time = *save_p++;
+    cnt_par = *save_p++;
+    cnt_pause = *save_p++;
+    state = *save_p++;
+    acceleratestage = *save_p++;
+    cnt = *save_p++;
 
     // dearchive all the modifications
     P_UnArchivePlayers (); 
@@ -1397,15 +1435,35 @@ byte* G_DoSerialize (int* outlen)
     *save_p++ = gameskill; 
     *save_p++ = gameepisode; 
     *save_p++ = gamemap; 
+    *save_p++ = wminfo.next;
     for (i=0 ; i<MAXPLAYERS ; i++) 
 	*save_p++ = playeringame[i]; 
     *save_p++ = leveltime>>16; 
     *save_p++ = leveltime>>8; 
     *save_p++ = leveltime; 
+    *save_p++ = menuactive;
+    *save_p++ = gamestate;
+    *save_p++ = serialized_gameaction;
+    *save_p++ = sp_state;
+    for (int i=0;i<MAXPLAYERS;++i) {
+        *save_p++ = cnt_kills[i];
+    }
+    for (int i=0;i<MAXPLAYERS;++i) {
+        *save_p++ = cnt_items[i];
+    }
+    for (int i=0;i<MAXPLAYERS;++i) {
+        *save_p++ = cnt_secret[i];
+    }
+    *save_p++ = cnt_time;
+    *save_p++ = cnt_par;
+    *save_p++ = cnt_pause;
+    *save_p++ = state;
+    *save_p++ = acceleratestage;
+    *save_p++ = cnt;
 
     P_ArchivePlayers (); 
     P_ArchiveWorld (); 
-    P_ArchiveThinkers (); 
+    P_ArchiveThinkers ();
     P_ArchiveSpecials (); 
 	HU_Archive();
 	 
