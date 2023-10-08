@@ -1189,6 +1189,31 @@ DOOM was open sourced in 1997, and there is one phrase in the README that rings 
 		return true;
 	}
 
+	// get serialized data for a session
+	if (strstr(uri, "serialized")) {
+		char buf[10];
+		int nwritten = 0;
+
+		RequestHandle reqHandle;
+		BodyHandle bodyhandle;
+		int res = xqd_req_body_downstream_get(&reqHandle, &bodyhandle);
+
+		xqd_req_header_value_get(reqHandle, "session", strlen("session"), buf, 10, &nwritten);
+		int sessionid = atoi(buf);
+
+		Z_Init();
+		int cache_len = 0;
+		byte* cache_data = X_GetStateFromCache(false, sessionid, &cache_len);
+		printf("Cache Data of size %d\n", cache_len);
+
+		ResponseHandle resphandle;
+		BodyHandle respbodyhandle;
+		xqd_resp_new(&resphandle);
+		xqd_body_new(&respbodyhandle);
+		res = xqd_body_write(respbodyhandle, cache_data, strlen(cache_data), BodyWriteEndBack, &nwritten);
+
+		xqd_resp_send_downstream(resphandle, respbodyhandle, 0);
+	}
 
 	if (!strstr(uri, "doomframe")) {
 		// we need to serve the html here
