@@ -175,6 +175,8 @@ int		usejoystick;
 
 extern int	key_right;
 extern int	key_left;
+extern int mouse_right;
+extern int mouse_left;
 extern int	key_up;
 extern int	key_down;
 
@@ -244,6 +246,8 @@ default_t	defaults[] =
 
     {"key_right",&key_right, 'D'},
     {"key_left",&key_left, 'A'},
+    {"mouse_right",&mouse_right, 'd'},
+    {"mouse_left",&mouse_left, 'a'},
     {"key_up",&key_up, 'W'},
     {"key_down",&key_down, 'S'},
     {"key_strafeleft",&key_strafeleft, 'Q'},

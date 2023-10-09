@@ -163,6 +163,9 @@ byte*		savebuffer;
 int             key_right;
 int		key_left;
 
+int mouse_right;
+int mouse_left;
+
 int		key_up;
 int		key_down; 
 int             key_strafeleft;
@@ -284,6 +287,11 @@ void G_BuildTiccmd (ticcmd_t* cmd)
     else 
 	turnheld = 0; 
 
+    // force faster turning on mouse
+    if (gamekeydown[mouse_right] || gamekeydown[mouse_left]) {
+        turnheld = 6;
+    }
+
     if (turnheld < SLOWTURNTICS) 
 	tspeed = 2;             // slow turn 
     else 
@@ -310,9 +318,9 @@ void G_BuildTiccmd (ticcmd_t* cmd)
     } 
     else 
     { 
-        if (gamekeydown[key_right])
+        if (gamekeydown[key_right] || gamekeydown[mouse_right])
             cmd->angleturn -= angleturn[tspeed]; 
-        if (gamekeydown[key_left]) 
+        if (gamekeydown[key_left] || gamekeydown[mouse_left]) 
             cmd->angleturn += angleturn[tspeed]; 
         if (joyxmove > 0) 
             cmd->angleturn -= angleturn[tspeed]; 

@@ -125,9 +125,14 @@ table td, table th {
   transform: translate(-50%,-50%);
   -ms-transform: translate(-50%,-50%);
 }
+
+selector { cursor: none; }
 </style>
 
 <script>
+
+const canvas = document.querySelector("canvas");
+
 var Game = {
 	stopMain: {},
 	started: false,
@@ -214,6 +219,8 @@ function download(filename, data) {
     document.body.removeChild(element);
 }
 
+document.addEventListener('contextmenu', event => event.preventDefault());
+
 document.addEventListener('keydown', (event) => {
   Game.keys[event.keyCode] = 1;
 }, false);
@@ -221,6 +228,53 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('keyup', (event) => {
 	delete Game.keys[event.keyCode];
 }, false);
+
+document.addEventListener("mousedown", (event) => {
+	if (event.button == 0)
+		Game.keys['F'.charCodeAt(0)] = 1;
+	if (event.button == 2)
+		Game.keys['U'.charCodeAt(0)] = 1;
+}, false);
+
+document.addEventListener("mouseup", (event) => {
+	console.log("mouseup with ", event.button);
+	if (event.button == 0)
+		delete Game.keys['F'.charCodeAt(0)];
+	if (event.button == 2)
+		delete Game.keys['U'.charCodeAt(0)];
+}, false);
+
+canvas.addEventListener("click", async () => {
+  if (!document.pointerLockElement) {
+    await canvas.requestPointerLock({
+      unadjustedMovement: true,
+    });
+  }
+});
+
+document.addEventListener("pointerlockchange", lockChangeAlert, false);
+
+function lockChangeAlert() {
+  if (document.pointerLockElement === canvas) {
+    console.log("The pointer lock status is now locked");
+    document.addEventListener("mousemove", updatePosition, false);
+  } else {
+    console.log("The pointer lock status is now unlocked");
+    document.removeEventListener("mousemove", updatePosition, false);
+  }
+}
+
+function updatePosition(e) {
+	if (e.movementX > 5) {
+		Game.keys['d'.charCodeAt(0)] = 1;
+	}
+	else if (e.movementX < -5) {
+		Game.keys['a'.charCodeAt(0)] = 1;
+	} else {
+		delete Game.keys['d'.charCodeAt(0)];
+		delete Game.keys['a'.charCodeAt(0)];
+	}
+}
 
 function RenderFrame() {
 	const rawcanvas = document.getElementById('framebuffer');
