@@ -1,4 +1,5 @@
 #include "x_cache.h"
+#include "i_system.h"
 
 #ifdef XQD
 #include "xqd.h"
@@ -39,14 +40,19 @@ X_GetStateFromCache(boolean global, int stateId, int* outlen)
 		BodyHandle body_handle = {0};
 		ret = get_body(cache_handle, mask, NULL, &body_handle);
 
-		byte* buf = Z_Malloc(50000,PU_STATIC,0);
+		byte* buf = Z_Malloc(200000,PU_STATIC,0);
 		int bodyindex=0;
 		int nread;
 		do {
-			int ret = xqd_body_read(body_handle, buf+bodyindex, 50000-bodyindex, &nread);
+			int ret = xqd_body_read(body_handle, buf+bodyindex, 200000-bodyindex, &nread);
 			bodyindex += nread;
-		} while (nread > 0 && bodyindex < 50000);
+		} while (nread > 0 && bodyindex < 200000);
 
+		// TODO to fully bullet proof this we could keep reading and allocating until
+		// we have the entire body
+		if (bodyindex == 200000 ) {
+			I_Error("We may be truncating the deserialized data");
+		}
 		*outlen = bodyindex;
 		return buf;
 	} else {
