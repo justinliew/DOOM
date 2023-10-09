@@ -1303,9 +1303,9 @@ void G_DoDeserialize (byte* data, int length)
 	playeringame[i] = *save_p++; 
 
     // load a base level 
-#ifndef WASISDK
+    // this enures that when we deserialize the level parts we have allocated
+    // the appropriate memory for the level
     G_InitNew (gameskill, gameepisode, gamemap); 
-#endif
  
     // get the times 
     a = *save_p++; 
