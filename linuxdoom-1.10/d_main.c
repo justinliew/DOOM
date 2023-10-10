@@ -502,7 +502,14 @@ X_ProcessIncoming(void)
 
 	// range will be 100001 - 1000001, odd from doomlobby
 	// if it is outside this range, reject this
-	if (sessionid < 100001 || sessionid > 1000001 || ((sessionid % 2) == 0) ) {
+	// if (sessionid < 100001 || sessionid > 1000001 || ((sessionid % 2) == 0) ) {
+	// 	printf("We got an invalid session id of %d; rejecting\n", sessionid);
+	// 	return 0;
+	// }
+
+	// current SP session id is generated in index_sp.html as this
+	// I don't know what hapepned to the above logic in the lobby but it no longer exists
+	if (sessionid < 100000 || sessionid > 1000000) {
 		printf("We got an invalid session id of %d; rejecting\n", sessionid);
 		return 0;
 	}
@@ -1428,7 +1435,7 @@ D_DoomMain(void)
 	}
 
 	// get skill / episode / map from parms
-	startskill = sk_medium;
+	startskill = sk_baby; // TEMP
 	startepisode = 1;
 	startmap = 1;
 	autostart = false;

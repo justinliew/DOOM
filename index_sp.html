@@ -433,9 +433,21 @@ function GetFrame() {
 			playername="Player" + playerid;
 			document.cookie = "playername="+playername;
 		}
-		setInterval(lobby_heartbeat, 1000 * 30); // 30s interval
-		Game.countdown = 30;
-		setInterval(lobby_counter, 1000); // 1s interval
+	}
+
+	function create_local_session() {
+		var sessionid=get_value_from_cookie('sessionid');
+		if (sessionid == 0) {
+			// 100000 - 1000000
+			sessionid = Math.floor(Math.random() * 900001) + 100000;
+			document.cookie = "sessionid="+sessionid;
+		}
+		Game.sessionId = sessionid;
+		Game.lastTick = performance.now();
+		Game.started = true;
+		document.getElementById('controlsbutton').style.display = 'block';
+		document.getElementById('waiting').style.display = 'none';
+		main(performance.now());
 	}
 
 	function create_and_join_session() {
@@ -467,7 +479,7 @@ function GetFrame() {
 	}
 
 	init_user();
-	create_and_join_session();
+	create_local_session();
 })();
 </script>
 </html>
