@@ -1152,9 +1152,9 @@ id: doom\n\
 title: DOOM\n\
 image:\n\
   href: /images/screenshot.png\n\
-  alt: DOOM on Compute @ Edge Demo\n\
+  alt: DOOM on Compute Demo\n\
 description: |\n\
-  A port of the original DOOM to Compute@Edge. \n\
+  A port of the original DOOM to Compute. \n\
   This demo was created to push the boundaries of the \n\
   platform and inspire new ideas!\n\
 views:\n\
@@ -1166,7 +1166,7 @@ views:\n\
 \n\
 DOOM was a game developed in 1993 by [id software](https://www.idsoftware.com/) and released in December of that year. Id software had made a living developing high quality 2D games, but with Wolfenstein in 1992 and then DOOM the following year, they made a historic leap into 3D, taking advantage of the quickly evolving PC hardware landscape to push the boundaries of the industry.\n\
 \n\
-DOOM was open sourced in 1997, and there is one phrase in the README that rings very true: “Port it to your favorite operating system” has come true, with DOOM being ported to hundreds of platforms, from the obvious to the obscure. Now we can show you how we brought it to Compute@Edge.\n\
+DOOM was open sourced in 1997, and there is one phrase in the README that rings very true: “Port it to your favorite operating system” has come true, with DOOM being ported to hundreds of platforms, from the obvious to the obscure. Now we can show you how we brought it to Compute.\n\
 \n\
 ## Key bindings:\n\
 \n\
