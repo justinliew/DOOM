@@ -8,9 +8,9 @@
 CC=/opt/wasi-sdk-20.0/bin/clang --sysroot /opt/wasi-sdk-20.0/share/wasi-sysroot
 
 #CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK 
-CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQD -DQUIET_XQD -Wl,--allow-undefined -lwasi-emulated-process-clocks # -DUSEASM 
+CFLAGS=-g -Wall -Wno-absolute-value -Wno-logical-not-parentheses -Wno-sizeof-pointer-memaccess -Wno-uninitialized -Wno-pointer-sign -Wno-incompatible-pointer-types -Wno-unsequenced -Wno-unused-but-set-variable -Wno-unused-const-variable -Wno-unused-variable -Wno-implicit-function-declaration -DHEADLESS -D_WASI_EMULATED_PROCESS_CLOCKS -DWASISDK -DXQD -DQUIET_XQD # -DUSEASM 
 #CFLAGS=-g -Wall -Wno-unused-const-variable -Wno-implicit-function-declaration -DHEADLESS -DWASISDK -DXQDMP -DXQD -Wl,--allow-undefined # -DUSEASM 
-LDFLAGS=
+LDFLAGS=-Wl,--allow-undefined -lwasi-emulated-process-clocks
 LIBS=-lm 
 
 # subdirectory for objects
@@ -93,7 +93,7 @@ $(O)/linuxxdoom:	$(OBJS) $(O)/i_main.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) $(O)/i_main.o \
 	-o $(O)/linuxxdoom $(LIBS)
 
-$(O)/%.o:	%.c
+$(O)/%.o:	%.c Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 #############################################################
