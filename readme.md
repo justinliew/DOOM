@@ -14,9 +14,3 @@ NOTE: jliew@fastly.com currently has access to the Compute service so you will n
 [Fastly DOOM Demo Documentation](https://www.fastly.com/documentation/solutions/demos/doom/)
 
 [Fastly Blog: Porting DOOM to Compute@Edge](https://www.fastly.com/blog/compute-edge-porting-the-iconic-video-game-doom)
-
-Internal Tech Talks
-
-https://drive.google.com/file/d/1aPd-sBxe3hY8_Tg7NX6ArF69cKsVBXAY/view
-
-https://drive.google.com/file/d/1Y48OMz0RygVAFDpQHjgoc12fykrDnSJI/view
